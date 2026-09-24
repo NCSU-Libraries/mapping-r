@@ -445,21 +445,25 @@ Now make the question itself visible:
 
 ```{r}
 #| label: buffer-viz
+#| fig-width: 9
+#| fig-height: 6
 #| fig-cap: "Each landmark with its 100 m circle. The buffers *are* the question."
 focus <- st_bbox(st_buffer(places_m, 250))
 
 ggplot() +
-  geom_sf(data = buildings_m, fill = "grey90", color = "grey75", linewidth = 0.2) +
-  geom_sf(data = trees_m, color = "forestgreen", size = 0.4, alpha = 0.6) +
-  # Your turn: two more layers. The circles — no fill, dashed grey outline,
-  # linewidth 0.3 — then the landmarks themselves as firebrick points, size 1.8.
+  geom_sf(data = buildings_m, fill = "grey93", color = "grey84", linewidth = 0.15) +
+  geom_sf(data = trees_m, color = "forestgreen", size = 0.35, alpha = 0.5) +
+  # Your turn: two more layers — and they go here, BEFORE coord_sf().
+  #   1. the circles: `shade`, fill "firebrick" at alpha 0.10, with a dashed
+  #      "firebrick" outline, linewidth 0.5
+  #   2. the landmarks: `places_m` as firebrick points, size 2
   ____ +
   ____ +
   coord_sf(xlim = focus[c("xmin", "xmax")], ylim = focus[c("ymin", "ymax")]) +
   theme_minimal()
 ```
 
-Notice the circles overlap. A tree sitting between two landmarks gets counted for both — which is correct here, because each question ("how many trees near the Court?") is asked independently of the others. If you ever needed to assign every tree to exactly *one* landmark, that's a different tool: `st_nearest_feature()`.
+Look at where the circles overlap: the tint doubles up, and so does the count. A tree sitting between two landmarks is counted for both — which is correct here, because each question ("how many trees near the Court?") is asked independently of the others. If you ever needed to assign every tree to exactly *one* landmark, that's a different tool: `st_nearest_feature()`.
 
 ::: callout-important
 ## The radius is a decision, not a fact

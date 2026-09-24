@@ -671,4 +671,94 @@ In one session we went from "what is spatial data?" to a finished map:
 - Flip the question with `st_nearest_feature()`: assign every tree to its closest landmark, then `count()`.
 - Colour the trees by species (`aes(color = common)`) — you'll need to lump the long tail into "Other" first, or the legend will run off the page.
 
+### Bonus — putting your points on a basemap
+
+We didn't cover this in the hour, but it's the most common follow-up question: *how do I get my points on top of satellite imagery, or a street map?*
+
+**The current go-to is [`maptiles`](https://cran.r-project.org/package=maptiles)**, paired with `tidyterra` for the drawing. There's no single blessed package in R, but `maptiles` is actively maintained, covers a long list of providers, and does the one thing that used to be painful: it hands back a raster **already reprojected into your layer's CRS**, so you don't have to think about Web Mercator at all.
+
+```{r}
+#| label: basemap-satellite
+#| eval: false
+install.packages(c("maptiles", "tidyterra"))
+library(maptiles)
+library(tidyterra)
+
+# get_tiles() wants an area, so hand it the view box from §4.
+view_area <- st_as_sfc(st_bbox(st_buffer(winner, 60)))
+
+sat <- get_tiles(view_area, provider = "Esri.WorldImagery", zoom = 18, crop = TRUE)
+
+ggplot() +
+  geom_spatraster_rgb(data = sat, maxcell = Inf) +      # the tiles go FIRST, underneath
+  geom_sf(data = winner, fill = NA, color = "white",
+          linetype = "dashed", linewidth = 0.6) +
+  geom_sf(data = trees_m, aes(size = dbh), color = "yellow", alpha = 0.85) +
+  geom_sf(data = winner_pt, color = "firebrick", size = 3.5, shape = 18) +
+  scale_size_continuous(range = c(0.4, 3.2), name = "Trunk dia. (in)") +
+  coord_sf(xlim = view[c("xmin", "xmax")], ylim = view[c("ymin", "ymax")],
+           expand = FALSE) +
+  labs(caption = get_credit("Esri.WorldImagery")) +     # attribution is not optional
+  theme_void() +
+  theme(plot.background = element_rect(fill = "white", color = NA))
+```
+
+Worth doing once just to see it: the inventory points land on top of the actual tree canopy in the imagery, which is a far more convincing argument that your data is right than any table.
+
+Four things that trip people up:
+
+-   **The tile layer goes first.** `geom_sf()` layers paint in the order you add them, so a basemap added last covers your data.
+-   **Attribution is a licence condition, not a nicety.** `get_credit("<provider>")` returns the exact string the provider requires — put it in `labs(caption = ...)`.
+-   **`zoom` is a trade-off.** Higher is sharper and slower, and pulls more tiles from someone else's server. For a campus-block view, 17–18 is about right; for a whole city, 12–13.
+-   **Set the plot background explicitly.** `theme_void()` leaves it transparent, and a transparent PNG shows up black in some viewers — which will eat your title and your attribution line.
+
+::: callout-warning
+## Most of the good-looking providers now want an API key
+
+This has changed recently enough that a lot of tutorials are wrong about it.
+
+-   **Keyless, works today:** `"Esri.WorldImagery"` (satellite), `"OpenStreetMap"` (streets — it even labels the Court of North Carolina and the halls around it), and the other `Esri.*` styles. Note that `"Esri.WorldGrayCanvas"` returns *"Map data not yet available"* at campus zoom levels, so it's no use for a close-in map.
+-   **Key required:** all the `CartoDB.*` styles (including Positron and DarkMatter), every `Stadia.*` style — which is where the old Stamen designs ended up — and `Thunderforest.*`. You still get tiles back, but they're stamped **API KEY REQUIRED** right across your map. If you have a key, pass it with `get_tiles(..., apikey = "…")`.
+
+`names(maptiles::get_providers())` lists everything available.
+:::
+
+#### A black-background map needs no basemap at all
+
+Since every dark tile provider now wants a key, the easier route to a dark map is to just style one — no account, no network, no attribution to track:
+
+```{r}
+#| label: basemap-dark
+#| eval: false
+ggplot() +
+  geom_sf(data = buildings_m, fill = "grey20", color = "grey35", linewidth = 0.25) +
+  geom_sf(data = winner, fill = "white", alpha = 0.05, color = "grey75",
+          linetype = "dashed", linewidth = 0.5) +
+  geom_sf(data = trees_m, aes(size = dbh), color = "springgreen3", alpha = 0.9) +
+  geom_sf(data = winner_pt, color = "firebrick1", size = 3.5, shape = 18) +
+  scale_size_continuous(range = c(0.4, 3.2), name = "Trunk dia. (in)") +
+  coord_sf(xlim = view[c("xmin", "xmax")], ylim = view[c("ymin", "ymax")],
+           expand = FALSE) +
+  annotation_scale(location = "bl", width_hint = 0.28,
+                   text_col = "grey80", line_col = "grey80") +
+  labs(title = "Court of North Carolina", subtitle = "81 trees within 100 m") +
+  theme_void() +
+  theme(
+    plot.background = element_rect(fill = "grey8", color = NA),
+    plot.title      = element_text(color = "white", face = "bold", size = 14),
+    plot.subtitle   = element_text(color = "grey70", size = 10),
+    legend.text     = element_text(color = "grey80"),
+    legend.title    = element_text(color = "grey80")
+  )
+```
+
+The trick is that on a dark ground **every** piece of text needs its colour set explicitly — title, subtitle, legend, and the scale bar's `text_col`/`line_col`. Miss one and it stays near-black and vanishes.
+
+#### Other routes worth knowing
+
+-   **`ggspatial::annotation_map_tile()`** — you already have `ggspatial` loaded, and this pulls OSM tiles through `rosm` in a single layer. Fewer providers than `maptiles`, but nothing extra to install.
+-   **`mapview` / `leaflet`** — for a slippy, zoomable map in your browser rather than a static figure. The right tool for exploring your own data; the wrong one for a figure in a paper.
+
+------------------------------------------------------------------------
+
 *If there's demand, a follow-up "Spatial Analysis in R" session could go deeper: buffers, density surfaces, and raster data with `terra`.*

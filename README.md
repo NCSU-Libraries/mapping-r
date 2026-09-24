@@ -1,31 +1,40 @@
 # Mapping in R
 
-**Understanding spatial data and making a good map with `sf`**
+**A one-hour workshop from NC State University Libraries — Data Science Services**
 
-A one-hour workshop from **NC State University Libraries — Data Science Services**.
+## ⬇️ Start here — download the workshop files
 
-We start with three real campus datasets and finish with one publication-quality map that answers a
-question you can only ask of spatial data: **which spot on campus has the most trees around it?**
+### [**Click to download everything (zip, ~1 MB)**](https://github.com/NCSU-Libraries/mapping-r/archive/refs/heads/main.zip)
+
+No GitHub account needed, and nothing about GitHub to learn. That one link gets you the data, both
+versions of the worksheet, and the project file.
+
+Then, in order:
+
+**1. Unzip it.** You'll get a folder called `mapping-r-main`.
+
+> On **Windows**, right-click the zip → **Extract All**. Double-clicking only *previews* the contents
+> without extracting them, and R can't read files that are still inside the archive — this is the most
+> common reason the first code chunk fails. On a **Mac**, double-clicking is genuinely enough.
+
+**2. Open the folder in your editor** — this differs between the two:
+
+| Editor | How to open it |
+|---|---|
+| **RStudio** | Double-click **`mapping-r.Rproj`** in the unzipped folder. |
+| **Positron** | Launch Positron first, then **File → Open Folder** and choose the `mapping-r-main` folder. Double-clicking the `.Rproj` doesn't reliably launch Positron. |
+
+Either route points R at the project folder, which is what makes the short file paths in the worksheet
+work.
+
+**3. Open `mapping-in-r-workshop-teaching.qmd`** — that's the worksheet — and follow along.
 
 ---
 
-## ⬇️ Download the workshop files
+## What we're building
 
-### [**Click here to download everything (zip, ~1 MB)**](https://github.com/NCSU-Libraries/mapping-r/archive/refs/heads/main.zip)
-
-That single link gives you the data, both versions of the worksheet, and the project file. You do not
-need a GitHub account, and you do not need to know anything about GitHub.
-
-Then:
-
-1. **Unzip it.** You'll get a folder called `mapping-r-main`.
-2. **Open `mapping-r.Rproj`** inside that folder. RStudio or Positron will launch with the working
-   directory already set — which is what makes the file paths in the worksheet work.
-3. **Open `mapping-in-r-workshop-teaching.qmd`** and follow along.
-
-> **Unzip properly, don't peek inside the zip.** On Windows, double-clicking a zip shows you the
-> contents without actually extracting them, and R can't read files that are still inside. Right-click
-> the zip → **Extract All**. On a Mac, double-clicking is genuinely enough.
+We start with three real campus datasets and finish with one publication-quality map that answers a
+question you can only ask of spatial data: **which spot on campus has the most trees around it?**
 
 ---
 
@@ -35,15 +44,15 @@ Then:
 |---|---|
 | **`mapping-in-r-workshop-teaching.qmd`** | **Start here.** The worksheet we use in the session. Some code is left blank (`____`) for you to fill in as we go. |
 | `mapping-in-r-workshop-complete.qmd` | Every blank filled in. Use it if you fall behind, or as your reference afterwards. |
-| `mapping-r.Rproj` | Open this first. Sets the working directory. |
+| `mapping-r.Rproj` | The RStudio project file. Sets the working directory. Positron users open the *folder* instead. |
 | `data/` | All five datasets. Don't rename anything inside. |
 
 ---
 
 ## Before the workshop: install three packages
 
-Run this once in the R console. It takes a few minutes, so please do it **before** the session rather
-than during it:
+The worksheet's first code chunk installs anything missing on its own, but `sf` in particular can take
+several minutes to build — so please run this **before** the session rather than during it:
 
 ```r
 install.packages(c("sf", "dplyr", "ggplot2", "ggspatial", "readxl"))

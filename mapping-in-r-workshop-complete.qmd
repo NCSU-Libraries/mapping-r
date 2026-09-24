@@ -71,14 +71,38 @@ A small, focused stack — nothing exotic:
 If attendees go hunting for tutorials, they'll find old code using `sp`, `rgdal`, `rgeos`, or `maptools`. **Those were retired from CRAN at the end of 2023.** Today's world is `sf` for vector data. If a Stack Overflow answer loads `rgdal`, it's stale — move on.
 :::
 
+Rather than assume those are already installed, check first and install whatever's missing. This is a snippet worth keeping in your back pocket — it's the difference between a script that runs on *your* machine and one that runs on a colleague's.
+
 ```{r}
 #| label: libraries
+pkgs <- c("sf", "dplyr", "ggplot2", "ggspatial", "readxl")
+
+# `%in%` against the installed list tells us what's absent; install only those.
+missing <- pkgs[!pkgs %in% rownames(installed.packages())]
+
+if (length(missing) > 0) {
+  message("Installing: ", paste(missing, collapse = ", "))
+  install.packages(missing, repos = "https://cloud.r-project.org")
+}
+
 library(sf)
 library(dplyr)
 library(ggplot2)
 library(ggspatial)
 library(readxl)
 ```
+
+::: callout-note
+## Why it's written this way
+
+Three small decisions in there, each worth stealing:
+
+-   **Install only what's missing.** Calling `install.packages()` unconditionally re-downloads and recompiles packages you already have — which for `sf` means several slow minutes, and on a shared machine may fail outright on permissions.
+-   **Name the repo explicitly.** `repos = "https://cloud.r-project.org"` means the line also works when R is running non-interactively — in a render, a scheduled job, or CI — where there's no mirror set and no one to answer the "choose a CRAN mirror" prompt.
+-   **Still call `library()` one per line.** The install block is plumbing; the `library()` calls are documentation. Anyone reading your script should be able to see the dependencies at a glance.
+
+A caveat worth knowing: this handles *missing* packages, not *outdated* ones. If a package is installed but too old for the code, you'll get a confusing error rather than an install. `packageVersion("sf")` is how you check.
+:::
 
 ------------------------------------------------------------------------
 
@@ -96,7 +120,12 @@ You downloaded this file as part of the workshop zip, so the data came with it �
 -   `NCStateBuildingsData.xls` — building names and addresses, to join onto the footprints.
 -   `NCState_places.csv` — a short list of well-known campus spots as lat/lon coordinates.
 
-**One thing to do first: open `mapping-r.Rproj`** from that same folder, if you haven't already. That sets R's working directory to the project, which is what makes the short relative paths below work. Then run this to confirm:
+**One thing to do first**, if you haven't already — and it differs by editor:
+
+-   **RStudio:** double-click `mapping-r.Rproj` in the unzipped folder.
+-   **Positron:** launch Positron first, then **File → Open Folder** and choose the unzipped `mapping-r-main` folder. (Double-clicking the `.Rproj` doesn't reliably launch Positron.)
+
+Either route points R at the project folder, which is what makes the short relative paths below work. Then run this to confirm:
 
 ```{r}
 #| label: check-files

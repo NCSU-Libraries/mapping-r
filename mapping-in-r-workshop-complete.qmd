@@ -58,7 +58,7 @@ Budget \~45 min of content, \~15 for questions and install triage.
 
 ## Setup
 
-A small, focused stack — nothing exotic:
+Packages we will use:
 
 - **`sf`** — the modern standard for *vector* spatial data (points, lines, polygons).
 - **`dplyr`** — attribute wrangling. `sf` objects work with `filter()`, `mutate()`, `count()`, `group_by()` directly.
@@ -66,9 +66,9 @@ A small, focused stack — nothing exotic:
 - **`readxl`** — reads `.xls`/`.xlsx` straight into a data frame, for the attribute table we join on.
 
 ::: callout-tip
-## A note on the ecosystem (worth saying out loud)
+## A note on the ecosystem
 
-If attendees go hunting for tutorials, they'll find old code using `sp`, `rgdal`, `rgeos`, or `maptools`. **Those were retired from CRAN at the end of 2023.** Today's world is `sf` for vector data. If a Stack Overflow answer loads `rgdal`, it's stale — move on.
+If you go hunting for tutorials, you'll find old code using `sp`, `rgdal`, `rgeos`, or `maptools`. **Those were retired from CRAN at the end of 2023.** Today's world is `sf` for vector data. If a Stack Overflow answer loads `rgdal`, it's stale — move on.
 :::
 
 Rather than assume those are already installed, check first and install whatever's missing. This is a snippet worth keeping in your back pocket — it's the difference between a script that runs on *your* machine and one that runs on a colleague's.
@@ -95,11 +95,9 @@ library(readxl)
 ::: callout-note
 ## Why it's written this way
 
-Three small decisions in there, each worth stealing:
-
--   **Install only what's missing.** Calling `install.packages()` unconditionally re-downloads and recompiles packages you already have — which for `sf` means several slow minutes, and on a shared machine may fail outright on permissions.
--   **Name the repo explicitly.** `repos = "https://cloud.r-project.org"` means the line also works when R is running non-interactively — in a render, a scheduled job, or CI — where there's no mirror set and no one to answer the "choose a CRAN mirror" prompt.
--   **Still call `library()` one per line.** The install block is plumbing; the `library()` calls are documentation. Anyone reading your script should be able to see the dependencies at a glance.
+- **Install only what's missing.** Calling `install.packages()` unconditionally re-downloads and recompiles packages you already have — which for `sf` means several slow minutes, and on a shared machine may fail outright on permissions.
+- **Name the repo explicitly.** `repos = "https://cloud.r-project.org"` means the line also works when R is running non-interactively — in a render, a scheduled job, or CI — where there's no mirror set and no one to answer the "choose a CRAN mirror" prompt.
+- **Still call `library()` one per line.** The install block is plumbing; the `library()` calls are documentation. Anyone reading your script should be able to see the dependencies at a glance.
 
 A caveat worth knowing: this handles *missing* packages, not *outdated* ones. If a package is installed but too old for the code, you'll get a confusing error rather than an install. `packageVersion("sf")` is how you check.
 :::
@@ -108,22 +106,22 @@ A caveat worth knowing: this handles *missing* packages, not *outdated* ones. If
 
 ## Get the workshop data {#sec-data}
 
-Before we write any analysis, everyone needs the same two datasets in the same place.
+Before we write any analysis, everyone needs the same datasets in the same place.
 
 ### What you already have
 
 You downloaded this file as part of the workshop zip, so the data came with it — it's in the `data/` folder sitting next to this document:
 
--   `BLDGSCAMPUS.shp` — campus building footprints. A shapefile is actually *several* files (`.shp`, `.dbf`, `.shx`, `.prj`, …) that must stay together in the same folder.
--   `NCSU_TreeInventory/NCSU_TreeInventory.gdb` — the campus tree inventory, as an Esri **File Geodatabase**. A `.gdb` is a *folder*, not a single file — keep it intact, don't rename what's inside.
--   `CAMPUSPERIMETER_ALL.shp` — the campus precinct boundaries. We use these to clip everything down to main campus.
--   `NCStateBuildingsData.xls` — building names and addresses, to join onto the footprints.
--   `NCState_places.csv` — a short list of well-known campus spots as lat/lon coordinates.
+- `BLDGSCAMPUS.shp` — campus building footprints. A shapefile is actually *several* files (`.shp`, `.dbf`, `.shx`, `.prj`, …) that must stay together in the same folder.
+- `NCSU_TreeInventory/NCSU_TreeInventory.gdb` — the campus tree inventory, as an Esri **File Geodatabase**. A `.gdb` is a *folder*, not a single file — keep it intact, don't rename what's inside.
+- `CAMPUSPERIMETER_ALL.shp` — the campus precinct boundaries. We use these to clip everything down to main campus.
+- `NCStateBuildingsData.xls` — building names and addresses, to join onto the footprints.
+- `NCState_places.csv` — a short list of well-known campus spots as lat/lon coordinates.
 
 **One thing to do first**, if you haven't already — and it differs by editor:
 
--   **RStudio:** double-click `mapping-r.Rproj` in the unzipped folder.
--   **Positron:** launch Positron first, then **File → Open Folder** and choose the unzipped `mapping-r-main` folder. (Double-clicking the `.Rproj` doesn't reliably launch Positron.)
+- **RStudio:** double-click `mapping-r.Rproj` in the unzipped folder.
+- **Positron:** launch Positron first, then **File → Open Folder** and choose the unzipped `mapping-r-main` folder. (Double-clicking the `.Rproj` doesn't reliably launch Positron.)
 
 Either route points R at the project folder, which is what makes the short relative paths below work. Then run this to confirm:
 
@@ -272,8 +270,8 @@ str(places_csv)     # a plain data frame — no geometry, no CRS, nothing spatia
 
 Nothing about this is spatial *to R*. `lat` and `lon` are ordinary numeric columns — you could take their mean or draw a histogram of them, and R would not object. One function changes that, and two of its arguments do the real work:
 
--   **`coords`** — which columns hold the coordinates, in **x, y** order. Longitude *first*, then latitude.
--   **`crs`** — what those numbers mean. You *tell* R this; it cannot infer it.
+- **`coords`** — which columns hold the coordinates, in **x, y** order. Longitude *first*, then latitude.
+- **`crs`** — what those numbers mean. You *tell* R this; it cannot infer it.
 
 ```{r}
 #| label: st-as-sf
@@ -282,7 +280,7 @@ places <- st_as_sf(places_csv, coords = c("lon", "lat"), crs = 4326)
 places
 ```
 
-Read the header out loud: geometry type **POINT**, CRS **WGS 84**. Notice that `lat` and `lon` are gone from the columns — they were consumed into `geometry` — while `name`, `type`, and `photo_url` came along untouched. It's a data frame with a geometry column, exactly like the layers we read off disk.
+Read the header: geometry type **POINT**, CRS **WGS 84**. Notice that `lat` and `lon` are gone from the columns — they were consumed into `geometry` — while `name`, `type`, and `photo_url` came along untouched. It's a data frame with a geometry column, exactly like the layers we read off disk.
 
 Worth proving to yourself that the points landed where you meant them to:
 
@@ -334,7 +332,7 @@ This is the whole mental model. Print one and you'll see a normal table with a s
 trees
 ```
 
-Read the header out loud with the room: geometry **type**, **dimension**, **bounding box** (the extent), and the **CRS**. Then the familiar data frame underneath. Everything you know about data frames still works — the geometry just comes along for the ride.
+Read the header: geometry **type**, **dimension**, **bounding box** (the extent), and the **CRS**. Then the familiar data frame underneath. Everything you know about data frames still works — the geometry just comes along for the ride.
 
 ### Geometry types
 
@@ -377,7 +375,7 @@ And if two layers are in different CRSs, you must put them on a **common** one b
 
 ### Attribute exploration is just the tidyverse
 
-Because it's a data frame, ordinary `dplyr` works. Habit to teach: `st_drop_geometry()` when you only care about the attributes — it's faster and stops the geometry from tagging along through every summary.
+Because it's a data frame, ordinary `dplyr` works. Use `st_drop_geometry()` when you only care about the attributes — it's faster and stops the geometry from tagging along through every summary.
 
 ```{r}
 #| label: eda
@@ -405,7 +403,7 @@ plot(st_geometry(trees), add = TRUE, pch = 20, cex = 0.4, col = "forestgreen")
 
 ### Reproject onto a common CRS (in meters)
 
-We're about to measure a distance — "within 100 metres" — and you cannot do that in degrees. So we put all three layers onto one *projected* CRS. **UTM Zone 17N (EPSG:32617)** is a clean, metric choice for central NC:
+We're about to measure a distance — "within 100 meters" — and you cannot do that in degrees. So we put all three layers onto one *projected* CRS. **UTM Zone 17N (EPSG:32617)** is a clean, metric choice for central NC:
 
 ```{r}
 #| label: transform
@@ -420,14 +418,14 @@ st_crs(trees_m)$units_gdal    # now "metre" — and all three layers match
 
 ### The spatial question — which place is the shadiest? {#sec-join}
 
-Here is something a plain table simply cannot answer: *how many trees are within a hundred metres of the Belltower?* Nothing in the tree inventory mentions the Belltower. Nothing in the landmark spreadsheet mentions trees. The only thing relating the two is **where they are** — which is the whole reason to bother with spatial data.
+Here is something a plain table simply cannot answer: *how many trees are within a hundred meters of the Belltower?* Nothing in the tree inventory mentions the Belltower. Nothing in the landmark spreadsheet mentions trees. The only thing relating the two is **where they are** — which is the whole reason to bother with spatial data.
 
-It takes two steps. Grow each landmark into a circle, then count the trees inside it.
+It takes two steps. Grow each landmark into a circle using a buffer, then count the trees inside it.
 
 ```{r}
 #| label: buffer-count
 # Step 1 — a buffer turns each point into a 100 m circle. `dist` is in the
-# CRS's units, which is exactly why we projected to metres first.
+# CRS's units, which is exactly why we projected to meters first.
 shade <- st_buffer(places_m, dist = 100)
 
 # Step 2 — for each circle, which trees fall inside it?
@@ -443,7 +441,7 @@ shade |>
 
 The **Court of North Carolina** takes it with 81 trees, and the **Brickyard** comes last with 14.
 
-Both of those should feel obviously right to anyone who has walked across campus — the Court is the old tree-lined quad, and the Brickyard is a couple of acres of brick. That agreement is the point. When a method reproduces something you already know, that's your evidence the method is sound, which is what earns you the right to trust it on a question you *can't* eyeball.
+Both of those should feel obviously right to anyone who has walked across campus — the Court is the old tree-lined quad, and the Brickyard is a couple of acres of brick.
 
 Now make the question itself visible:
 
@@ -471,7 +469,7 @@ Look at where the circles overlap: the tint doubles up, and so does the count. A
 
 Change the buffer and you can change the answer. At **50 m** the Memorial Belltower wins with 20 trees. At **100 m** the Court of North Carolina takes it with 81. At **150 m** the Court holds the lead but everything behind it reshuffles. None of those is wrong — they answer subtly different questions: *right at the monument* versus *in the surrounding block*.
 
-So pick your radius deliberately and say it out loud. Ours is 100 m because that's roughly a one-minute walk — about the range over which shade actually influences where you'd choose to sit. Reporting "the shadiest spot on campus" without naming the radius is the spatial-analysis equivalent of a bar chart with no y-axis.
+So pick your radius deliberately, and be ready to justify it. Ours is 100 m because that's roughly a one-minute walk — about the range over which shade actually influences where you'd choose to sit. Reporting "the shadiest spot on campus" without naming the radius is the spatial-analysis equivalent of a bar chart with no y-axis.
 :::
 
 ::: callout-note
@@ -491,7 +489,7 @@ Same idea every time: **relate features by where they are.** That's what makes t
 
 ## Making the map — the main event {#sec-map}
 
-We have an answer. Now we need a map that *shows* it — one map, centred on the winner, carrying three things: the landmark, the buildings around it, and the trees. We'll build it a layer at a time, naming each cartographic decision as we go.
+We have an answer. Now we need a map that *shows* it — one map, centered on the winner, carrying three things: the landmark, the buildings around it, and the trees. We'll build it a layer at a time, naming each cartographic decision as we go.
 
 First, pull out the pieces the map needs:
 
@@ -542,7 +540,7 @@ ggplot() +
 
 ### Step 3 — draw the evidence, then orient the reader
 
-Two jobs here. The dashed circle is the 100 m buffer from §3 — putting it on the map lets a reader see the rule the claim rests on, instead of taking our word for it. Then the usual furniture: building labels, a scale bar, a north arrow.
+Two jobs here. The dashed circle is the 100 m buffer from §3 — putting it on the map lets a reader see the rule the claim rests on, instead of taking our word for it. Then the usual map attributes: building labels, a scale bar, a north arrow.
 
 ```{r}
 #| label: map3
@@ -628,7 +626,7 @@ ggsave("shadiest_spot.png", width = 8.4, height = 7, dpi = 300)
 - **Let context recede.** Buildings are grey so the trees read first. The eye should land on what the map is *about*.
 - **Draw the evidence.** The dashed circle isn't decoration — it's the rule behind the claim, put where a reader can check it.
 - **Account for what's missing.** `dbh` is blank for 17 of these trees, and `aes(size = dbh)` drops them silently (with a warning you'll scroll past). For anything you publish, decide on purpose: give them a fixed small size, or note the exclusion in the caption.
-- **Choose colorblind-safe palettes.** This map uses a single hue, so it dodges the issue — but the moment you colour by species, reach for `viridis` or `Dark2` and avoid raw red/green contrasts.
+- **Choose colorblind-safe palettes.** This map uses a single hue, so it dodges the issue — but the moment you color by species, reach for `viridis` or `Dark2` and avoid raw red/green contrasts.
 :::
 
 ------------------------------------------------------------------------
@@ -656,13 +654,13 @@ In one session we went from "what is spatial data?" to a finished map:
 - Re-run the shade question at a different radius and see whether the winner survives it.
 - Rank by *canopy* instead of by count — swap `lengths(st_intersects(...))` for a `st_join()` and `sum(dbh, na.rm = TRUE)` per landmark. Does the Brickyard's handful of big trees change its standing?
 - Flip the question with `st_nearest_feature()`: assign every tree to its closest landmark, then `count()`.
-- Colour the trees by species (`aes(color = common)`) — you'll need to lump the long tail into "Other" first, or the legend will run off the page.
+- Color the trees by species (`aes(color = common)`) — you'll need to lump the long tail into "Other" first, or the legend will run off the page.
 
 ### Bonus — putting your points on a basemap
 
 We didn't cover this in the hour, but it's the most common follow-up question: *how do I get my points on top of satellite imagery, or a street map?*
 
-**The current go-to is [`maptiles`](https://cran.r-project.org/package=maptiles)**, paired with `tidyterra` for the drawing. There's no single blessed package in R, but `maptiles` is actively maintained, covers a long list of providers, and does the one thing that used to be painful: it hands back a raster **already reprojected into your layer's CRS**, so you don't have to think about Web Mercator at all.
+**The current go-to is [`maptiles`](https://cran.r-project.org/package=maptiles)**, paired with `tidyterra` for the drawing. There's no single package in R, but `maptiles` is actively maintained, covers a long list of providers, and does the one thing that used to be painful: it hands back a raster **already reprojected into your layer's CRS**, so you don't have to think about Web Mercator at all.
 
 ```{r}
 #| label: basemap-satellite
@@ -694,18 +692,18 @@ Worth doing once just to see it: the inventory points land on top of the actual 
 
 Four things that trip people up:
 
--   **The tile layer goes first.** `geom_sf()` layers paint in the order you add them, so a basemap added last covers your data.
--   **Attribution is a licence condition, not a nicety.** `get_credit("<provider>")` returns the exact string the provider requires — put it in `labs(caption = ...)`.
--   **`zoom` is a trade-off.** Higher is sharper and slower, and pulls more tiles from someone else's server. For a campus-block view, 17–18 is about right; for a whole city, 12–13.
--   **Set the plot background explicitly.** `theme_void()` leaves it transparent, and a transparent PNG shows up black in some viewers — which will eat your title and your attribution line.
+- **The tile layer goes first.** `geom_sf()` layers paint in the order you add them, so a basemap added last covers your data.
+- **Attribution is a license condition, not a nicety.** `get_credit("<provider>")` returns the exact string the provider requires — put it in `labs(caption = ...)`.
+- **`zoom` is a trade-off.** Higher is sharper and slower, and pulls more tiles from someone else's server. For a campus-block view, 17–18 is about right; for a whole city, 12–13.
+- **Set the plot background explicitly.** `theme_void()` leaves it transparent, and a transparent PNG shows up black in some viewers — which will eat your title and your attribution line.
 
 ::: callout-warning
 ## Most of the good-looking providers now want an API key
 
 This has changed recently enough that a lot of tutorials are wrong about it.
 
--   **Keyless, works today:** `"Esri.WorldImagery"` (satellite), `"OpenStreetMap"` (streets — it even labels the Court of North Carolina and the halls around it), and the other `Esri.*` styles. Note that `"Esri.WorldGrayCanvas"` returns *"Map data not yet available"* at campus zoom levels, so it's no use for a close-in map.
--   **Key required:** all the `CartoDB.*` styles (including Positron and DarkMatter), every `Stadia.*` style — which is where the old Stamen designs ended up — and `Thunderforest.*`. You still get tiles back, but they're stamped **API KEY REQUIRED** right across your map. If you have a key, pass it with `get_tiles(..., apikey = "…")`.
+- **Keyless, works today:** `"Esri.WorldImagery"` (satellite), `"OpenStreetMap"` (streets — it even labels the Court of North Carolina and the halls around it), and the other `Esri.*` styles. Note that `"Esri.WorldGrayCanvas"` returns *"Map data not yet available"* at campus zoom levels, so it's no use for a close-in map.
+- **Key required:** all the `CartoDB.*` styles (including Positron and DarkMatter), every `Stadia.*` style — which is where the old Stamen designs ended up — and `Thunderforest.*`. You still get tiles back, but they're stamped **API KEY REQUIRED** right across your map. If you have a key, pass it with `get_tiles(..., apikey = "…")`.
 
 `names(maptiles::get_providers())` lists everything available.
 :::
@@ -739,13 +737,21 @@ ggplot() +
   )
 ```
 
-The trick is that on a dark ground **every** piece of text needs its colour set explicitly — title, subtitle, legend, and the scale bar's `text_col`/`line_col`. Miss one and it stays near-black and vanishes.
+The trick is that on a dark ground **every** piece of text needs its color set explicitly — title, subtitle, legend, and the scale bar's `text_col`/`line_col`. Miss one and it stays near-black and vanishes.
 
 #### Other routes worth knowing
 
--   **`ggspatial::annotation_map_tile()`** — you already have `ggspatial` loaded, and this pulls OSM tiles through `rosm` in a single layer. Fewer providers than `maptiles`, but nothing extra to install.
--   **`mapview` / `leaflet`** — for a slippy, zoomable map in your browser rather than a static figure. The right tool for exploring your own data; the wrong one for a figure in a paper.
+- **`ggspatial::annotation_map_tile()`** — you already have `ggspatial` loaded, and this pulls OSM tiles through `rosm` in a single layer. Fewer providers than `maptiles`, but nothing extra to install.
+- **`mapview` / `leaflet`** — for a zoomable map in your browser rather than a static figure. The right tool for exploring your own data; the wrong one for a figure in a paper.
+
+## Before You Go
+
+### Evaluate our Workshop
+
+We appreciate your input. Let us know how this Workshop went for you! We take your input seriously and appreciate the time you take to give it. Please fill out [our workshop evaluation](https://go.ncsu.edu/dss-workshop-eval).
+
+### Need Additional Help?
+
+We are available to help you with whatever question you have about this Workshop or programming in general. If you run into snags or questions (we all do), as you start to create programs for yourself, reach out to [Get Data Help](https://go.ncsu.edu/getdatahelp). Send an email, make an appointment, or reserve a workstation! We are here to assist you to be successful in your data science journey.
 
 ------------------------------------------------------------------------
-
-*If there's demand, a follow-up "Spatial Analysis in R" session could go deeper: buffers, density surfaces, and raster data with `terra`.*

@@ -1,7 +1,10 @@
-# Quarto render output
-/*.html
-/*_files/
+# Quarto working files
 /.quarto/
+/*_files/
+
+# The rendered complete worksheet IS committed on purpose, so people can read
+# it without running R. The teaching version can't render (it has ____ blanks).
+/mapping-in-r-workshop-teaching.html
 
 # R session junk
 .Rhistory

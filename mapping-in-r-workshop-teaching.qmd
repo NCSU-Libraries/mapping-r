@@ -27,7 +27,7 @@ This is the **worksheet**. Some of the code is missing — marked `____` — and
 - **§1 is already written for you** — loading data is fiddly and not what you came to learn. The typing starts in §2.
 :::
 
-## Welcome & learning objectives
+## Welcome & learning objectives {.unnumbered}
 
 Most people who come to a mapping session have the same goal: *I have some locations — study sites, sample points, buildings — and I want a decent map of them.* That's exactly what we'll do. Along the way you'll pick up the few concepts that make spatial data behave.
 
@@ -42,7 +42,7 @@ We'll use real campus data — building footprints (polygons), NC State's tree i
 
 ------------------------------------------------------------------------
 
-## Setup
+## Setup {.unnumbered}
 
 Packages we will use:
 

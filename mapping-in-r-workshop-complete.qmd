@@ -16,7 +16,7 @@ execute:
   message: false
 ---
 
-## Welcome & learning objectives
+## Welcome & learning objectives {.unnumbered}
 
 Most people who come to a mapping session have the same goal: *I have some locations — study sites, sample points, buildings — and I want a decent map of them.* That's exactly what we'll do. Along the way you'll pick up the few concepts that make spatial data behave.
 
@@ -56,7 +56,7 @@ Budget \~45 min of content, \~15 for questions and install triage.
 
 ------------------------------------------------------------------------
 
-## Setup
+## Setup {.unnumbered}
 
 Packages we will use:
 

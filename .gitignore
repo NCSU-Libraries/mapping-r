@@ -1,0 +1,17 @@
+# Quarto render output
+/*.html
+/*_files/
+/.quarto/
+
+# R session junk
+.Rhistory
+.RData
+.Rproj.user/
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# Saved map output from the ggsave() chunk
+shadiest_spot.png
+campus_tree_map.png

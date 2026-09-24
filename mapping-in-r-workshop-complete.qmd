@@ -1,0 +1,630 @@
+---
+title: "Mapping in R"
+subtitle: "Understanding spatial data and making a good map with `sf`"
+author: "NC State University Libraries — Data Science Services"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    code-fold: false
+    theme: cosmo
+    embed-resources: true
+execute:
+  warning: false
+  message: false
+---
+
+## Welcome & learning objectives
+
+Most people who come to a mapping session have the same goal: *I have some locations — study sites, sample points, buildings — and I want a decent map of them.* That's exactly what we'll do. Along the way you'll pick up the few concepts that make spatial data behave.
+
+By the end of this hour you will be able to:
+
+1.  **Explain what makes data "spatial"** — geometry, coordinate reference systems (CRS), and the fact that an `sf` object is *just a data frame with a geometry column*.
+2.  **Get your data into R** — whether it's a shapefile, a geodatabase, or a spreadsheet of coordinates.
+3.  **Ask a question only spatial data can answer** — draw a buffer around each landmark, count what falls inside, and find the shadiest spot on campus.
+4.  **Make a publication-quality map** you'd actually put in a poster or paper.
+
+We'll use real campus data — building footprints (polygons), NC State's tree inventory (points), and a short spreadsheet of well-known campus spots — and we'll use it to answer one concrete question: **which place on campus has the most trees around it?**
+
+::: {.callout-note collapse="true"}
+## Facilitator notes — one-hour timing
+
+Budget \~45 min of content, \~15 for questions and install triage.
+
+|   Min | Section                                                        |
+|------:|----------------------------------------------------------------|
+|   0–5 | Intro + the question we're going to answer                     |
+|  5–18 | §1 Get four files in (`.shp`, `.gdb`, `.xls`, `.csv`) and clip |
+| 18–26 | §2 What makes data spatial (anatomy, CRS)                      |
+| 26–38 | §3 Explore + the spatial question (buffer + count)             |
+| 38–52 | §4 Making the map — the main event                             |
+| 52–60 | Wrap-up, resources, questions                                  |
+
+**Two things worth slowing down for:** the CRS discussion in §2.3 (every downstream headache traces back to it) and building the map layer-by-layer in §4 (that's the skill everyone came for).
+
+**§1 is the tight spot.** Four file formats is a lot of reading-in before anybody sees a map. Don't live-type it — run the chunks and talk over them. The one to actually slow down on is §1.5, `st_as_sf()` on the CSV, because that's the on-ramp most attendees need for their own data.
+
+**If you run long,** §3's buffer table is the part that has to survive — §4's map is *about* that result. The `buffer-viz` context map is the one to cut.
+
+**Before class:** confirm the data folder downloads and reads on the room's setup, and set the repo link in §1. Ask everyone to run `install.packages(c("sf", "readxl", "ggspatial"))` beforehand.
+
+**The punchline, don't spoil it early:** the Court of North Carolina wins and the Brickyard comes last. Both are obviously right to anyone who has walked across campus, which is exactly the point — get the room to guess before you run the chunk.
+:::
+
+------------------------------------------------------------------------
+
+## Setup
+
+A small, focused stack — nothing exotic:
+
+- **`sf`** — the modern standard for *vector* spatial data (points, lines, polygons).
+- **`dplyr`** — attribute wrangling. `sf` objects work with `filter()`, `mutate()`, `count()`, `group_by()` directly.
+- **`ggplot2` + `ggspatial`** — mapping. `geom_sf()` draws geometry; `ggspatial` adds the scale bar and north arrow.
+- **`readxl`** — reads `.xls`/`.xlsx` straight into a data frame, for the attribute table we join on.
+
+::: callout-tip
+## A note on the ecosystem (worth saying out loud)
+
+If attendees go hunting for tutorials, they'll find old code using `sp`, `rgdal`, `rgeos`, or `maptools`. **Those were retired from CRAN at the end of 2023.** Today's world is `sf` for vector data. If a Stack Overflow answer loads `rgdal`, it's stale — move on.
+:::
+
+```{r}
+#| label: libraries
+library(sf)
+library(dplyr)
+library(ggplot2)
+library(ggspatial)
+library(readxl)
+```
+
+------------------------------------------------------------------------
+
+## Get the workshop data {#sec-data}
+
+Before we write any analysis, everyone needs the same two datasets in the same place.
+
+### What you already have
+
+You downloaded this file as part of the workshop zip, so the data came with it — it's in the `data/` folder sitting next to this document:
+
+-   `BLDGSCAMPUS.shp` — campus building footprints. A shapefile is actually *several* files (`.shp`, `.dbf`, `.shx`, `.prj`, …) that must stay together in the same folder.
+-   `NCSU_TreeInventory/NCSU_TreeInventory.gdb` — the campus tree inventory, as an Esri **File Geodatabase**. A `.gdb` is a *folder*, not a single file — keep it intact, don't rename what's inside.
+-   `CAMPUSPERIMETER_ALL.shp` — the campus precinct boundaries. We use these to clip everything down to main campus.
+-   `NCStateBuildingsData.xls` — building names and addresses, to join onto the footprints.
+-   `NCState_places.csv` — a short list of well-known campus spots as lat/lon coordinates.
+
+**One thing to do first: open `mapping-r.Rproj`** from that same folder, if you haven't already. That sets R's working directory to the project, which is what makes the short relative paths below work. Then run this to confirm:
+
+```{r}
+#| label: check-files
+list.files("data")                     # BLDGSCAMPUS.shp, CAMPUSPERIMETER_ALL.shp,
+                                       # NCStateBuildingsData.xls, NCState_places.csv
+list.files("data/NCSU_TreeInventory")  # should include the .gdb folder
+```
+
+Empty, or an error? You're almost certainly in the wrong working directory rather than missing the files. `getwd()` shows where R thinks it is; opening `mapping-r.Rproj` is the fix.
+
+*(Need the files again later, or want to follow along after today? Everything lives at <https://github.com/NCSU-Libraries/mapping-r> — or use the short link from the slides.)*
+
+::: callout-important
+## Please read the data disclaimer
+
+The tree inventory is provided by **NC State University, Campus Planning & Strategic Investment**, and ships with a disclaimer (`Disclaimer.txt`) in the data folder. Two things every participant should understand: the data **may be incomplete or inaccurate**, and it should be used **for this workshop only** — not for official, legal, or commercial purposes.
+
+> **Disclaimer — Campus Planning & Strategic Investment, NC State University**
+>
+> NC State University makes every effort to produce and publish the most current and accurate content possible. However, the maps and data are produced for informational purposes and are NOT surveys. The information is compiled from various sources and not intended for official use or legal reference. The user of this site should not solely rely on the data provided herein. The information provided may not be used for commercial purposes or sold.
+:::
+
+### Read the data into R
+
+`st_read()` reads dozens of formats the same way — shapefiles, GeoPackage (`.gpkg`), GeoJSON, and geodatabases. The building footprints are a shapefile, so they read in one call:
+
+```{r}
+#| label: read-buildings
+buildings <- st_read("data/BLDGSCAMPUS.shp") |>
+  st_zm()     # drop the unused elevation coordinate — see the callout below
+```
+
+The tree inventory is a File Geodatabase. Because a `.gdb` can hold *several* layers, you point `st_read()` at the folder and name the layer you want. `st_layers()` lists what's inside so you can grab the exact name:
+
+```{r}
+#| label: read-trees
+st_layers("data/NCSU_TreeInventory/NCSU_TreeInventory.gdb")
+
+trees <- st_read(
+  "data/NCSU_TreeInventory/NCSU_TreeInventory.gdb",
+  layer = "NCSU_TreeInventory_20251107"
+) |>
+  st_zm()
+```
+
+::: callout-warning
+## `st_zm()` — do this now, or debug it later
+
+Both of these layers were exported from ArcGIS carrying a **third coordinate**, elevation, that nothing in this workshop uses. `st_zm()` strips it off.
+
+Skip it and everything looks fine: the layers read, print, and plot perfectly happily. Then a clip or an overlay several steps later dies with `OGR: Corrupt data / Error: OGR error` and no hint as to which line is at fault. Check any layer with `class(st_geometry(buildings)[[1]])` — `XYZ` means the Z coordinate is still attached, `XY` means you're clean.
+:::
+
+::: callout-tip
+## Reading a `.gdb` directly — no ArcGIS export needed
+
+`sf` reads File Geodatabases natively (via GDAL's OpenFileGDB driver), so there's no need to export to shapefile first. That's a good thing: shapefiles truncate field names to 10 characters and flatten some data types, so your attributes are safer straight from the `.gdb`. If you're ever choosing a format for your *own* data, GeoPackage (`.gpkg`) is the friendly modern option.
+:::
+
+### Focus on main campus
+
+The building and tree layers cover *all* of NC State's property — including farms and field labs an hour from Raleigh. We want the walkable core, so we'll clip everything to **main campus**: the North and Central precincts together. First read in the perimeter shapefile, using the approach above, and work out which column holds the precinct names.
+
+```{r}
+#| label: perimeter-inspect
+perimeters <- st_read("data/CAMPUSPERIMETER_ALL.shp")   # <- your filename
+
+names(perimeters)              # which column holds the perimeter name?
+st_drop_geometry(perimeters)   # the actual rows/names to choose from
+```
+
+The attribute `Precinct_N` is what we need. **North Campus** and **Central Campus** together are what people mean by main campus, so we'll keep both and clip the other layers to them.
+
+```{r}
+#| label: clip-main-campus
+main_campus <- perimeters |>
+  filter(Precinct_N %in% c("North Campus", "Central Campus"))
+
+# Keep only features that fall on main campus. Subsetting one sf object by
+# another — `layer[boundary, ]` — keeps the features that intersect it. We
+# transform the boundary into each layer's CRS on the fly, so this works even
+# though the files were saved in different coordinate systems.
+buildings <- buildings[st_transform(main_campus, st_crs(buildings)), ]
+trees     <- trees[st_transform(main_campus, st_crs(trees)), ]
+
+# The inventory flags trees that have been taken out. We're about to ask a
+# question about shade, so the removed ones shouldn't count.
+trees <- trees |> filter(spacestatus != "Removed")
+
+nrow(buildings)   # 209 footprints
+nrow(trees)       # 1,925 standing trees
+```
+
+Clipping early, in one place, is what keeps the rest of the session fast and the maps legible — that took us from 4,424 trees statewide down to the 1,925 on the blocks we actually care about.
+
+### Join the building attributes
+
+A quick look at the building attributes — there is not much to see: an internal ID, a building number, and the `geometry` column:
+
+```{r}
+#| label: tidy-buildings
+names(buildings)     # "OBJECTID", "BLDGNUM", "geometry"
+```
+
+The buildings dataset only includes the building footprints and a building number. We will join this dataset with building attribute data in an excel spreadsheet.
+
+```{r}
+#| label: join-attributes
+bldg_attrs <- read_excel("data/NCStateBuildingsData.xls")
+
+names(bldg_attrs)    # BLDG_NUM, BLDG_NAME, STATUS_DESCR, SITE_DESCR, ADDRESS, ...
+
+# An attribute join is plain dplyr — nothing spatial about it. Keep the sf
+# object on the LEFT and the result is still sf, with geometry untouched.
+buildings <- buildings |>
+  left_join(bldg_attrs, by = c("BLDGNUM" = "BLDG_NUM")) |>
+  rename(name = BLDG_NAME)     # a short name field for the map labels later
+
+# Sanity check: how many footprints failed to find a match? (should be 0)
+sum(is.na(buildings$name))
+
+buildings |>
+  st_drop_geometry() |>
+  select(BLDGNUM, name, SITE_DESCR, ADDRESS) |>
+  head()
+```
+
+::: callout-warning
+## Joins fail on key *type*, not key value
+
+`left_join()` matches `"004"` to `"004"`, but never `"004"` to `4`. Campus building numbers are text — they have letters (`843B`) and leading zeros (`004`) — so both sides must be character. Open this spreadsheet in Excel and re-save it and Excel will helpfully turn `004` into the number `4`, and those rows will silently stop matching. If a join comes back all `NA`, check `class()` on both key columns first.
+:::
+
+### The third layer — a spreadsheet of landmarks {#sec-csv}
+
+Our third dataset is the one most people actually arrive with: a plain spreadsheet. A column of latitudes, a column of longitudes, and the job is to turn that table into spatial data. `data/NCState_places.csv` is exactly that — a hand-typed list of well-known campus spots, and the thing we'll ask our spatial question about in §3.
+
+```{r}
+#| label: csv-source
+places_csv <- read.csv("data/NCState_places.csv")
+
+str(places_csv)     # a plain data frame — no geometry, no CRS, nothing spatial yet
+```
+
+Nothing about this is spatial *to R*. `lat` and `lon` are ordinary numeric columns — you could take their mean or draw a histogram of them, and R would not object. One function changes that, and two of its arguments do the real work:
+
+-   **`coords`** — which columns hold the coordinates, in **x, y** order. Longitude *first*, then latitude.
+-   **`crs`** — what those numbers mean. You *tell* R this; it cannot infer it.
+
+```{r}
+#| label: st-as-sf
+places <- st_as_sf(places_csv, coords = c("lon", "lat"), crs = 4326)
+
+places
+```
+
+Read the header out loud: geometry type **POINT**, CRS **WGS 84**. Notice that `lat` and `lon` are gone from the columns — they were consumed into `geometry` — while `name`, `type`, and `photo_url` came along untouched. It's a data frame with a geometry column, exactly like the layers we read off disk.
+
+Worth proving to yourself that the points landed where you meant them to:
+
+```{r}
+#| label: csv-check
+#| fig-cap: "Sanity check — the places land inside the campus boundaries, across several precincts."
+# Plotting the points FIRST sets the extent; the boundary then draws into that
+# window. Draw the perimeter first instead and campus shrinks to a dot — that
+# layer covers NC State property statewide, out to the farms and field labs.
+plot(st_geometry(places), pch = 19, col = "firebrick", axes = TRUE)
+plot(st_geometry(st_transform(perimeters, 4326)), add = TRUE, border = "grey55")
+```
+
+::: callout-warning
+## The two ways this goes wrong
+
+**Reversing `coords`.** `c("lon", "lat")` is x-then-y, which reads backwards against the "lat/long" everyone says out loud — and this CSV lists `lat` first, which makes the mistake easier still. Reverse them and R faithfully places campus at 35.8°E, 78.7°S: the middle of Antarctica. Nothing errors. You just get a map of nowhere.
+
+**Forgetting `crs = 4326`.** Without it, R stores the numbers but has no idea where on Earth they are, and every later step — mapping, measuring, joining — silently misbehaves. If your coordinates look like `-78.6, 35.7`, they're almost always lon/lat, i.e. `crs = 4326`.
+:::
+
+Finally, clip these to main campus the same way we clipped the other two layers:
+
+```{r}
+#| label: clip-places
+# The two precinct polygons don't quite meet where the railroad cuts through
+# campus, and the Free Expression Tunnel sits in that gap. So we filter on the
+# bounding *box* of main campus rather than the polygons themselves, and it
+# survives the clip.
+campus_box <- st_as_sfc(st_bbox(st_transform(main_campus, st_crs(places))))
+
+places <- places[campus_box, ]
+
+places$name     # nine landmarks on main campus
+```
+
+That on-ramp — table → `st_as_sf()` → clip → map — is the whole game for coordinate spreadsheets, and it's exactly how you'd bring in your own study sites.
+
+------------------------------------------------------------------------
+
+## What makes data "spatial"? {#sec-anatomy}
+
+### An `sf` object is a data frame with a geometry column
+
+This is the whole mental model. Print one and you'll see a normal table with a spatial header on top and a geometry column on the end (its name comes from the source — for our tree data it's `shape`):
+
+```{r}
+#| label: print
+trees
+```
+
+Read the header out loud with the room: geometry **type**, **dimension**, **bounding box** (the extent), and the **CRS**. Then the familiar data frame underneath. Everything you know about data frames still works — the geometry just comes along for the ride.
+
+### Geometry types
+
+Vector data comes in three basic flavors. Our two layers show two of them:
+
+```{r}
+#| label: geom-types
+unique(st_geometry_type(trees))      # POINT   — one location each
+unique(st_geometry_type(buildings))  # POLYGON / MULTIPOLYGON — an area
+# (the third common type is LINESTRING — roads, rivers, paths)
+```
+
+### The coordinate reference system — the one concept that matters most {#sec-crs}
+
+Every spatial layer carries a **CRS**: the answer to *"what do these numbers mean?"* Ask each layer what it's in — and notice they may not match:
+
+```{r}
+#| label: crs
+st_crs(trees)$Name       # the tree inventory's CRS
+st_crs(buildings)$Name   # the buildings' — same, both from campus GIS
+st_crs(places)$Name      # our spreadsheet — a different CRS entirely
+```
+
+There's the mismatch, live. The two layers that came from campus GIS share a projected CRS in *feet*; the landmarks we built from a spreadsheet are in WGS 84 **degrees**, because that's what we told `st_as_sf()`. All three are correct. None of them can be overlaid or measured against the others until they're on a common CRS.
+
+::: callout-important
+## Why the CRS is not optional (the conceptual "why")
+
+Coordinates are meaningless without knowing the system they're measured in. A pair like `(-78.7, 35.6)` is a spot in North Carolina *only* if you know it's lon/lat degrees on the WGS84 datum. Two things follow:
+
+- **A geographic CRS** (e.g. EPSG:4326) measures angles on a globe. A degree of longitude is a different number of meters in Raleigh than at the equator — so you **can't measure distance or area in degrees**.
+- **A projected CRS** (e.g. UTM, or NC State Plane) flattens a region onto a plane in linear units. You reproject to one of these *before* measuring.
+
+And if two layers are in different CRSs, you must put them on a **common** one before you can overlay or relate them. We do that next.
+:::
+
+------------------------------------------------------------------------
+
+## Explore, then ask one spatial question {#sec-explore}
+
+### Attribute exploration is just the tidyverse
+
+Because it's a data frame, ordinary `dplyr` works. Habit to teach: `st_drop_geometry()` when you only care about the attributes — it's faster and stops the geometry from tagging along through every summary.
+
+```{r}
+#| label: eda
+trees |>
+  st_drop_geometry() |>
+  count(common, sort = TRUE)     # most common tree species on campus
+```
+
+### A fast look at the geometry
+
+`plot()` for a quick glance — but wrap it in `st_geometry()`:
+
+```{r}
+#| label: base-plot
+#| fig-cap: "Fast base-R look. `st_geometry()` draws shapes only."
+plot(st_geometry(buildings), col = "grey80", border = "grey40")
+plot(st_geometry(trees), add = TRUE, pch = 20, cex = 0.4, col = "forestgreen")
+```
+
+::: callout-warning
+## Gotcha
+
+`plot(trees)` *without* `st_geometry()` draws **one map per column** — surprising and slow. Always wrap in `st_geometry()` for a plain map.
+:::
+
+### Reproject onto a common CRS (in meters)
+
+We're about to measure a distance — "within 100 metres" — and you cannot do that in degrees. So we put all three layers onto one *projected* CRS. **UTM Zone 17N (EPSG:32617)** is a clean, metric choice for central NC:
+
+```{r}
+#| label: transform
+trees_m     <- st_transform(trees,     32617)
+buildings_m <- st_transform(buildings, 32617)
+places_m    <- st_transform(places,    32617)
+
+st_crs(trees_m)$units_gdal    # now "metre" — and all three layers match
+```
+
+*(If `st_crs()` ever comes back empty for a layer, its CRS wasn't recorded — set it with `st_set_crs()` to the correct code before transforming.)*
+
+### The spatial question — which place is the shadiest? {#sec-join}
+
+Here is something a plain table simply cannot answer: *how many trees are within a hundred metres of the Belltower?* Nothing in the tree inventory mentions the Belltower. Nothing in the landmark spreadsheet mentions trees. The only thing relating the two is **where they are** — which is the whole reason to bother with spatial data.
+
+It takes two steps. Grow each landmark into a circle, then count the trees inside it.
+
+```{r}
+#| label: buffer-count
+# Step 1 — a buffer turns each point into a 100 m circle. `dist` is in the
+# CRS's units, which is exactly why we projected to metres first.
+shade <- st_buffer(places_m, dist = 100)
+
+# Step 2 — for each circle, which trees fall inside it?
+#   st_intersects() hands back a list with one element per circle, holding the
+#   row numbers of the trees it contains. lengths() turns that into a count.
+shade$n_trees <- lengths(st_intersects(shade, trees_m))
+
+shade |>
+  st_drop_geometry() |>
+  select(name, type, n_trees) |>
+  arrange(desc(n_trees))
+```
+
+The **Court of North Carolina** takes it with 81 trees, and the **Brickyard** comes last with 14.
+
+Both of those should feel obviously right to anyone who has walked across campus — the Court is the old tree-lined quad, and the Brickyard is a couple of acres of brick. That agreement is the point. When a method reproduces something you already know, that's your evidence the method is sound, which is what earns you the right to trust it on a question you *can't* eyeball.
+
+Now make the question itself visible:
+
+```{r}
+#| label: buffer-viz
+#| fig-cap: "Each landmark with its 100 m circle. The buffers *are* the question."
+focus <- st_bbox(st_buffer(places_m, 250))
+
+ggplot() +
+  geom_sf(data = buildings_m, fill = "grey90", color = "grey75", linewidth = 0.2) +
+  geom_sf(data = trees_m, color = "forestgreen", size = 0.4, alpha = 0.6) +
+  geom_sf(data = shade, fill = NA, color = "grey25", linetype = "dashed",
+          linewidth = 0.3) +
+  geom_sf(data = places_m, color = "firebrick", size = 1.8) +
+  coord_sf(xlim = focus[c("xmin", "xmax")], ylim = focus[c("ymin", "ymax")]) +
+  theme_minimal()
+```
+
+Notice the circles overlap. A tree sitting between two landmarks gets counted for both — which is correct here, because each question ("how many trees near the Court?") is asked independently of the others. If you ever needed to assign every tree to exactly *one* landmark, that's a different tool: `st_nearest_feature()`.
+
+::: callout-important
+## The radius is a decision, not a fact
+
+Change the buffer and you can change the answer. At **50 m** the Memorial Belltower wins with 20 trees. At **100 m** the Court of North Carolina takes it with 81. At **150 m** the Court holds the lead but everything behind it reshuffles. None of those is wrong — they answer subtly different questions: *right at the monument* versus *in the surrounding block*.
+
+So pick your radius deliberately and say it out loud. Ours is 100 m because that's roughly a one-minute walk — about the range over which shade actually influences where you'd choose to sit. Reporting "the shadiest spot on campus" without naming the radius is the spatial-analysis equivalent of a bar chart with no y-axis.
+:::
+
+::: callout-note
+## The vocabulary of spatial relationships
+
+`st_buffer()` and `st_intersects()` are two of a family. The others you'll reach for:
+
+- `st_join(points, polygons, join = st_within)` — *which region contains each point?* (the classic point-in-polygon)
+- `st_intersects()`, `st_contains()`, `st_touches()` — true/false spatial tests
+- `st_nearest_feature()` — *which feature is each point closest to?*
+- `st_distance()` — actual distances between features
+
+Same idea every time: **relate features by where they are.** That's what makes the data spatial.
+:::
+
+------------------------------------------------------------------------
+
+## Making the map — the main event {#sec-map}
+
+We have an answer. Now we need a map that *shows* it — one map, centred on the winner, carrying three things: the landmark, the buildings around it, and the trees. We'll build it a layer at a time, naming each cartographic decision as we go.
+
+First, pull out the pieces the map needs:
+
+```{r}
+#| label: winner
+winner    <- shade |> slice_max(n_trees, n = 1)        # the winning buffer + its count
+winner_pt <- places_m |> filter(name == winner$name)   # the landmark itself
+
+# The map window: the 100 m circle plus a little breathing room.
+view <- st_bbox(st_buffer(winner, 60))
+
+# Label the halls that actually border the quad — the buildings whose
+# footprints touch the circle. Because they touch it they are always inside
+# the window, which means no label ever gets clipped at the edge.
+edge <- buildings_m[winner, ]
+edge$area_m2 <- as.numeric(st_area(edge))
+edge_labels  <- edge |> slice_max(area_m2, n = 4) |> st_centroid()
+
+winner$name
+```
+
+### Step 1 — geometry on the page
+
+`coord_sf()` does the zooming. The layers are still all of main campus; we're only choosing what to look at.
+
+```{r}
+#| label: map1
+#| fig-cap: "Just the shapes, cropped to the winning landmark. Every map starts here."
+ggplot() +
+  geom_sf(data = buildings_m) +
+  geom_sf(data = trees_m) +
+  coord_sf(xlim = view[c("xmin", "xmax")], ylim = view[c("ymin", "ymax")])
+```
+
+### Step 2 — encode meaning; buildings as quiet context
+
+Buildings recede to grey so the trees read first. The trees are sized by trunk diameter (`dbh`), which is a fair stand-in for canopy — and therefore for shade, which is what the map is about.
+
+```{r}
+#| label: map2
+#| fig-cap: "Buildings recede to grey; the trees carry the information."
+ggplot() +
+  geom_sf(data = buildings_m, fill = "grey86", color = "grey68", linewidth = 0.25) +
+  geom_sf(data = trees_m, aes(size = dbh), color = "forestgreen", alpha = 0.7) +
+  scale_size_continuous(range = c(0.4, 3.4), name = "Trunk dia. (in)") +
+  coord_sf(xlim = view[c("xmin", "xmax")], ylim = view[c("ymin", "ymax")])
+```
+
+### Step 3 — draw the evidence, then orient the reader
+
+Two jobs here. The dashed circle is the 100 m buffer from §3 — putting it on the map lets a reader see the rule the claim rests on, instead of taking our word for it. Then the usual furniture: building labels, a scale bar, a north arrow.
+
+```{r}
+#| label: map3
+#| fig-width: 8
+#| fig-height: 6.6
+#| fig-cap: "The buffer, the landmark, and the cartographic furniture that makes a map legible."
+ggplot() +
+  geom_sf(data = winner, fill = "#eaf3ea", color = NA) +
+  geom_sf(data = buildings_m, fill = "grey86", color = "grey68", linewidth = 0.25) +
+  geom_sf(data = winner, fill = NA, color = "grey35", linetype = "dashed",
+          linewidth = 0.4) +
+  geom_sf(data = trees_m, aes(size = dbh), color = "forestgreen", alpha = 0.7) +
+  geom_sf(data = winner_pt, color = "firebrick", size = 3, shape = 18) +
+  geom_sf_text(data = edge_labels, aes(label = name), size = 2.3, color = "grey30",
+               fontface = "italic", check_overlap = TRUE) +
+  scale_size_continuous(range = c(0.4, 3.4), name = "Trunk dia. (in)") +
+  coord_sf(xlim = view[c("xmin", "xmax")], ylim = view[c("ymin", "ymax")]) +
+  annotation_scale(location = "bl", width_hint = 0.28) +
+  annotation_north_arrow(location = "tr", which_north = "true",
+                         style = north_arrow_minimal())
+```
+
+::: callout-tip
+## Layer order is a design tool
+
+The pale green halo is drawn **first**, underneath the buildings, so it tints the ground without washing out the footprints on top of it. Put that same layer last and it veils everything beneath it in green. In `ggplot2` each `geom_sf()` paints over the ones before it, so the order you type them *is* the visual hierarchy.
+:::
+
+### Step 4 — the finished, publication-quality map
+
+The last additions are the ones that let the map travel without you: a title that states the finding, a subtitle carrying the number, and a caption crediting the data.
+
+```{r}
+#| label: map-final
+#| fig-width: 8.4
+#| fig-height: 7
+#| fig-cap: "The deliverable — one place, one number, and the evidence for both."
+ggplot() +
+  geom_sf(data = winner, fill = "#eaf3ea", color = NA) +
+  geom_sf(data = buildings_m, fill = "grey86", color = "grey68", linewidth = 0.25) +
+  geom_sf(data = winner, fill = NA, color = "grey35", linetype = "dashed",
+          linewidth = 0.4) +
+  geom_sf(data = trees_m, aes(size = dbh), color = "forestgreen", alpha = 0.7) +
+  geom_sf(data = winner_pt, color = "firebrick", size = 3, shape = 18) +
+  geom_sf_text(data = edge_labels, aes(label = name), size = 2.3, color = "grey30",
+               fontface = "italic", check_overlap = TRUE) +
+  geom_sf_label(data = winner_pt, aes(label = name), size = 2.9, nudge_y = 26,
+                fill = "white", color = "firebrick", linewidth = 0.2) +
+  scale_size_continuous(range = c(0.4, 3.4), name = "Trunk dia. (in)") +
+  coord_sf(xlim = view[c("xmin", "xmax")], ylim = view[c("ymin", "ymax")],
+           expand = FALSE) +
+  annotation_scale(location = "bl", width_hint = 0.28) +
+  annotation_north_arrow(location = "tr", which_north = "true",
+                         style = north_arrow_minimal()) +
+  labs(
+    title    = paste0("The shadiest spot on campus: ", winner$name),
+    subtitle = paste0(winner$n_trees, " inventoried trees within 100 m — ",
+                      "more than any other landmark on main campus"),
+    caption  = "Data: NC State University, Campus Planning & Strategic Investment · Made in R with sf + ggplot2"
+  ) +
+  theme_void() +
+  theme(
+    plot.title      = element_text(face = "bold", size = 14),
+    plot.subtitle   = element_text(color = "grey30", size = 10),
+    plot.caption    = element_text(color = "grey50", size = 7.5),
+    legend.position = "right"
+  )
+```
+
+Notice that the title and subtitle are *computed* from `winner`, not typed. Change the buffer radius in §3 and the map retitles itself — including if the winner changes.
+
+Save it at print resolution:
+
+```{r}
+#| label: save
+#| eval: false
+ggsave("shadiest_spot.png", width = 8.4, height = 7, dpi = 300)
+```
+
+::: callout-tip
+## Four cartography habits worth naming
+
+- **Let context recede.** Buildings are grey so the trees read first. The eye should land on what the map is *about*.
+- **Draw the evidence.** The dashed circle isn't decoration — it's the rule behind the claim, put where a reader can check it.
+- **Account for what's missing.** `dbh` is blank for 17 of these trees, and `aes(size = dbh)` drops them silently (with a warning you'll scroll past). For anything you publish, decide on purpose: give them a fixed small size, or note the exclusion in the caption.
+- **Choose colorblind-safe palettes.** This map uses a single hue, so it dodges the issue — but the moment you colour by species, reach for `viridis` or `Dark2` and avoid raw red/green contrasts.
+:::
+
+------------------------------------------------------------------------
+
+## Wrap-up & where to go next
+
+In one session we went from "what is spatial data?" to a finished map:
+
+- an `sf` object is a **data frame with a geometry column**
+- the **CRS** tells R what the coordinates mean — check it, and put layers on a common *projected* CRS before you measure anything
+- data comes in via **`st_read()`** (shapefiles, geodatabases), **`st_as_sf()`** (coordinate spreadsheets), and an ordinary **`left_join()`** for attribute tables
+- **clipping to a study area** early, in one place, is what keeps a campus map legible
+- **`st_buffer()` + `st_intersects()`** answered a question no attribute table could: which place has the most trees around it
+- **`geom_sf()` + `ggspatial`** turn layers into a publishable map
+
+### Resources
+
+- **Geocomputation with R** — free online, the standard reference: <https://r.geocompx.org/>
+- **`sf` documentation & vignettes** — <https://r-spatial.github.io/sf/>
+- **r-spatial.org** — news and deeper dives from the maintainers
+
+### Take it further (good exercises)
+
+- Map **your own** CSV of sites: `read.csv()` → `st_as_sf()` → `geom_sf()`.
+- Re-run the shade question at a different radius and see whether the winner survives it.
+- Rank by *canopy* instead of by count — swap `lengths(st_intersects(...))` for a `st_join()` and `sum(dbh, na.rm = TRUE)` per landmark. Does the Brickyard's handful of big trees change its standing?
+- Flip the question with `st_nearest_feature()`: assign every tree to its closest landmark, then `count()`.
+- Colour the trees by species (`aes(color = common)`) — you'll need to lump the long tail into "Other" first, or the legend will run off the page.
+
+*If there's demand, a follow-up "Spatial Analysis in R" session could go deeper: buffers, density surfaces, and raster data with `terra`.*

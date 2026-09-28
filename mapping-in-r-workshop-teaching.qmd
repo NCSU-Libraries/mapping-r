@@ -406,26 +406,66 @@ Every spatial layer carries a **CRS**: the answer to *"what do these numbers mea
 #| label: crs
 # The first one is done. Your turn for the other two.
 st_crs(trees)$Name       # the tree inventory's CRS
-____                     # the buildings' — same, both came from campus GIS
+____                     # the buildings' — same name, both came from campus GIS
 ____                     # our spreadsheet — a different CRS entirely
 ```
 
-There's the mismatch, live. The two layers that came from campus GIS share a projected CRS in *feet*; the landmarks we built from a spreadsheet are in WGS 84 **degrees**, because that's what we told `st_as_sf()`. All three are correct. None of them can be overlaid or measured against the others until they're on a common CRS.
+There's the mismatch, live. The two layers that came from campus GIS use a projected CRS in *feet*; the landmarks we built from a spreadsheet are in WGS 84 **degrees**, because that's what we told `st_as_sf()`. All three are correct. They just can't be compared with each other until they're on a common CRS.
+
+#### What happens if you ignore it?
+
+Less than you'd expect, which is the problem. The quick check is to compare two layers' CRSs directly:
+
+```{r}
+#| label: crs-check
+st_crs(places) == st_crs(trees)     # FALSE: they don't match
+```
+
+A map won't necessarily tell you. `ggplot()` reprojects every layer to match the first one as it draws, so a ggplot of these two layers looks fine. Base `plot()` draws the numbers as they are:
+
+```{r}
+#| label: crs-plot
+#| fig-cap: "The landmarks are on this map too, about two million units off its left edge."
+plot(st_geometry(trees), pch = 20, cex = 0.3, col = "forestgreen", axes = TRUE)
+plot(st_geometry(places), add = TRUE, pch = 19, col = "firebrick")   # nothing appears
+
+st_coordinates(places[1, ])   # degrees: about -78.66, 35.79
+st_coordinates(trees[1, ])    # feet:    about 2,098,056, 741,280
+```
+
+No landmarks, and no error. Spatial operations are safer: they run the same check, and refuse.
+
+```{r}
+#| label: crs-refuse
+#| error: true
+st_intersects(places, trees)
+```
+
+`st_crs(x) == st_crs(y) is not TRUE` is the error to recognize. It means: reproject one layer to match the other.
+
+One more surprise. The trees and the buildings print the same CRS name, yet:
+
+```{r}
+#| label: crs-same-name
+st_crs(trees) == st_crs(buildings)   # FALSE, despite the matching names
+```
+
+The buildings' `.prj` file writes out the same system with its own numbers, and one of them, the false easting, is 0.0026 feet (under a millimeter) off the standard definition. `sf` compares the whole definition, not the name, so `st_intersects(trees, buildings)` refuses too. That's also why the clip in §1.3 reprojects the boundary to match each layer. Check with `==`, not by reading the names.
 
 ::: callout-important
 ## Why the CRS is not optional (the conceptual "why")
 
 Coordinates are meaningless without knowing the system they're measured in. A pair like `(-78.7, 35.6)` is a spot in North Carolina *only* if you know it's lon/lat degrees on the WGS84 datum. Two things follow:
 
-- **A geographic CRS** (e.g. EPSG:4326) measures angles on a globe. A degree of longitude is a different number of meters in Raleigh than at the equator — so you **can't measure distance or area in degrees**.
-- **A projected CRS** (e.g. UTM, or NC State Plane) flattens a region onto a plane in linear units. You reproject to one of these *before* measuring.
+- **A geographic CRS** (e.g. EPSG:4326) measures angles on a globe. A degree of longitude is a different number of meters in Raleigh than at the equator, so **a degree is not a unit of distance**. `sf` covers for this: given lon/lat data, it measures on a sphere and reports meters. Many other tools don't, so measure in a projected CRS, where you know the units.
+- **A projected CRS** (e.g. UTM, or NC State Plane) flattens a region onto a plane in linear units, meters or feet. Distances and areas come out in those units.
 
-And if two layers are in different CRSs, you must put them on a **common** one before you can overlay or relate them. We do that next.
+And if two layers are in different CRSs, you must put them on a **common** one before `sf` will relate them. We do that next.
 :::
 
 ### Reproject onto a common CRS (in meters) {#sec-transform}
 
-In §3 we'll measure a distance — "within 100 meters" — and you cannot do that in degrees. So we put all three layers onto one *projected* CRS. **UTM Zone 17N (EPSG:32617)** is a clean, metric choice for central NC:
+In §3 we'll relate the landmarks to the trees and measure a distance, "within 100 meters". The first needs the layers on one CRS; the second is easiest in a *projected* CRS in meters, where `dist = 100` plainly means 100 meters. **UTM Zone 17N (EPSG:32617)** is a clean, metric choice for central NC:
 
 ```{r}
 #| label: transform
@@ -434,7 +474,11 @@ trees_m     <- st_transform(trees,     32617)
 buildings_m <- ____
 places_m    <- ____
 
-st_crs(trees_m)$units_gdal    # should print "metre" — your self-check
+st_crs(trees_m)$units_gdal            # should print "metre" — your self-check
+
+# Your turn: re-run the check from §2.3 on the landmarks and the trees, using
+# the reprojected versions. It should come back TRUE now.
+st_crs(____) == st_crs(____)
 ```
 
 From here on we use the `_m` layers. *(If `st_crs()` ever comes back empty for a layer, its CRS wasn't recorded — set it with `st_set_crs()` to the correct code before transforming.)*
@@ -479,7 +523,7 @@ It takes two steps. Grow each landmark into a circle using a buffer, then count 
 ```{r}
 #| label: buffer-count
 # Step 1 — a buffer turns each point into a circle. `dist` is in the CRS's
-# units, which is exactly why we projected to meters first.
+# units: meters, because we projected to UTM.
 radius <- ____                                 # in meters: we'll use 100
 
 #   Which layer do we buffer — the landmarks, or the trees?
@@ -530,6 +574,24 @@ Look at where the circles overlap: the tint doubles up, and so does the count. A
 Change the buffer and you can change the answer. (Try it: set `radius` to 50 or 150 and re-run the chunk.) At **50 m** the Memorial Belltower wins with 20 trees. At **100 m** the Court of North Carolina takes it with 81. At **150 m** the Court holds the lead but everything behind it reshuffles. None of those is wrong — they answer subtly different questions: *right at the monument* versus *in the surrounding block*.
 
 So pick your radius deliberately, and be ready to justify it. Ours is 100 m because that's roughly a one-minute walk — about the range over which shade actually influences where you'd choose to sit. Reporting "the shadiest spot on campus" without naming the radius is the spatial-analysis equivalent of a bar chart with no y-axis.
+:::
+
+::: callout-warning
+## Same code, wrong units, no error
+
+Suppose we had skipped UTM and put the landmarks on the trees' CRS instead. That's a reasonable choice: it's the CRS the campus files came in. The code runs just the same:
+
+```{r}
+#| label: feet-trap
+places_ft <- st_transform(places, st_crs(trees))
+st_crs(places_ft)$units_gdal                        # "US survey foot"
+
+shade_ft <- st_buffer(places_ft, dist = radius)     # 100 ... feet, this time
+data.frame(name    = places_ft$name,
+           n_trees = lengths(st_intersects(shade_ft, trees)))
+```
+
+The Court of North Carolina drops from 81 trees to 0, because these are 100-*foot* circles. Nothing errors, and the CRSs match. The one check that catches it is `units_gdal`: always know what `dist` is measured in.
 :::
 
 ::: callout-note
@@ -708,7 +770,7 @@ ggsave("shadiest_spot.png", width = 8.4, height = 7, dpi = 300)
 In one session we went from "what is spatial data?" to a finished map:
 
 - an `sf` object is a **data frame with a geometry column**
-- the **CRS** tells R what the coordinates mean — check it, and put layers on a common *projected* CRS before you measure anything
+- the **CRS** tells R what the coordinates mean — compare layers with `st_crs(a) == st_crs(b)`, and put them on a common *projected* CRS before you measure anything
 - data comes in via **`st_read()`** (shapefiles, geodatabases), **`st_as_sf()`** (coordinate spreadsheets), and an ordinary **`left_join()`** for attribute tables
 - **look before you analyze**: a quick `plot()` shows what a layer covers, and the `Dimension:` line shows whether it carries a Z to drop with `st_zm()`
 - **clipping to a study area** early, in one place, is what keeps a campus map legible

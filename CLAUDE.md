@@ -40,8 +40,9 @@ zip and work in the teaching `.qmd`, so everything in the repo ships to them.
   §1. A `##` inside a `:::` callout is the callout's title, not a section.
 - Results are typed into prose: Court of North Carolina 81 trees, Brickyard 14, the 50 m / 150 m
   comparison, the facilitator "punchline", the 1,217 → 209 buildings and 4,424 → 1,925 trees after
-  clipping, and the Z / dimension counts in §1.2. If the data, filters or buffer radius change,
-  re-run and update them. Map titles are computed from `winner` and `radius`; keep them that way.
+  clipping, the Z / dimension counts in §1.2, the 0.0026 ft false-easting gap in §2.3.1, and the
+  feet demo in §3.2 (Court of North Carolina 0 trees at 100 ft). If the data, filters or buffer
+  radius change, re-run and update them. Map titles are computed from `winner` and `radius`; keep them that way.
 
 ## Conventions
 

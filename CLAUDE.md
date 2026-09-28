@@ -12,8 +12,19 @@ zip and work in the teaching `.qmd`, so everything in the repo ships to them.
   blank's hint instead of filling it in.
 - Intended differences: the teaching file has its own subtitle, the "How to use this file" callout, and
   a guess-before-you-run prompt where the complete file states the result. Only the complete file has
-  the facilitator-notes callout. §1 has no blanks in either.
+  the facilitator-notes callout.
 - After editing, `diff` the two files and confirm every difference is one of these.
+
+## What the blanks are for
+
+- Blanks are for what attendees will reuse on their own data: `st_as_sf()` arguments, `st_crs()`,
+  `st_transform()`, `st_buffer()`, `st_intersects()`, and `geom_sf(data = ____)`. Each one is a
+  decision (which layer, which radius, which order), with a hint comment above it.
+- Styling is prefilled: colors, sizes, scales, scale bar, north arrow, titles. The one aesthetic blank
+  is `aes(size = ____)` in §4 Step 2. Plain dplyr is prefilled too.
+- In the map steps, blank only the layers that are new in that step.
+- §1 is prefilled except for the `st_as_sf()` blanks in §1.5.
+- Check: fill every blank with its answer and the code should match the complete file exactly.
 
 ## Rendering
 
@@ -28,8 +39,9 @@ zip and work in the teaching `.qmd`, so everything in the repo ships to them.
   table, and the README (which cites §1.2). Welcome and Setup are `{.unnumbered}` so content starts at
   §1. A `##` inside a `:::` callout is the callout's title, not a section.
 - Results are typed into prose: Court of North Carolina 81 trees, Brickyard 14, the 50 m / 150 m
-  comparison, the facilitator "punchline", and the title in the `basemap-dark` chunk. If the data,
-  filters or buffer radius change, re-run and update them.
+  comparison, the facilitator "punchline", the 1,217 → 209 buildings and 4,424 → 1,925 trees after
+  clipping, and the Z / dimension counts in §1.2. If the data, filters or buffer radius change,
+  re-run and update them. Map titles are computed from `winner` and `radius`; keep them that way.
 
 ## Conventions
 

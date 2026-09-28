@@ -34,18 +34,18 @@ We'll use real campus data — building footprints (polygons), NC State's tree i
 
 Budget \~45 min of content, \~15 for questions and install triage.
 
-|   Min | Section                                                        |
-|------:|----------------------------------------------------------------|
-|   0–5 | Intro + the question we're going to answer                     |
-|  5–18 | §1 Get four files in (`.shp`, `.gdb`, `.xls`, `.csv`) and clip |
-| 18–26 | §2 What makes data spatial (anatomy, CRS)                      |
-| 26–38 | §3 Explore + the spatial question (buffer + count)             |
-| 38–52 | §4 Making the map — the main event                             |
-| 52–60 | Wrap-up, resources, questions                                  |
+|   Min | Section                                                           |
+|------:|-------------------------------------------------------------------|
+|   0–5 | Intro + the question we're going to answer                        |
+|  5–20 | §1 Get four files in (`.shp`, `.gdb`, `.xls`, `.csv`), look, clip |
+| 20–28 | §2 What makes data spatial (anatomy, CRS, reprojecting)           |
+| 28–38 | §3 Explore + the spatial question (buffer + count)                |
+| 38–52 | §4 Making the map — the main event                                |
+| 52–60 | Wrap-up, resources, questions                                     |
 
-**Two things worth slowing down for:** the CRS discussion in §2.3 (every downstream headache traces back to it) and building the map layer-by-layer in §4 (that's the skill everyone came for).
+**Two things worth slowing down for:** the CRS discussion and reprojection in §2.3–2.4 (every downstream headache traces back to it) and building the map layer-by-layer in §4 (that's the skill everyone came for).
 
-**§1 is the tight spot.** Four file formats is a lot of reading-in before anybody sees a map. Don't live-type it — run the chunks and talk over them. The one to actually slow down on is §1.5, `st_as_sf()` on the CSV, because that's the on-ramp most attendees need for their own data.
+**§1 is the tight spot.** Four file formats is a lot of reading-in before anybody sees a map. Don't live-type it — run the chunks and talk over them. Two stops are worth the time: the before-clipping map in §1.3 (ask the room what's wrong with it before you explain), and §1.5, `st_as_sf()` on the CSV, which has the only blanks in §1 because it's the on-ramp most attendees need for their own data.
 
 **If you run long,** §3's buffer table is the part that has to survive — §4's map is *about* that result. The `buffer-viz` context map is the one to cut.
 
@@ -152,8 +152,7 @@ The tree inventory is provided by **NC State University, Campus Planning & Strat
 
 ```{r}
 #| label: read-buildings
-buildings <- st_read("data/BLDGSCAMPUS.shp") |>
-  st_zm()     # drop the unused elevation coordinate — see the callout below
+buildings <- st_read("data/BLDGSCAMPUS.shp")
 ```
 
 The tree inventory is a File Geodatabase. Because a `.gdb` can hold *several* layers, you point `st_read()` at the folder and name the layer you want. `st_layers()` lists what's inside so you can grab the exact name:
@@ -165,17 +164,8 @@ st_layers("data/NCSU_TreeInventory/NCSU_TreeInventory.gdb")
 trees <- st_read(
   "data/NCSU_TreeInventory/NCSU_TreeInventory.gdb",
   layer = "NCSU_TreeInventory_20251107"
-) |>
-  st_zm()
+)
 ```
-
-::: callout-warning
-## `st_zm()` — do this now, or debug it later
-
-Both of these layers were exported from ArcGIS carrying a **third coordinate**, elevation, that nothing in this workshop uses. `st_zm()` strips it off.
-
-Skip it and everything looks fine: the layers read, print, and plot perfectly happily. Then a clip or an overlay several steps later dies with `OGR: Corrupt data / Error: OGR error` and no hint as to which line is at fault. Check any layer with `class(st_geometry(buildings)[[1]])` — `XYZ` means the Z coordinate is still attached, `XY` means you're clean.
-:::
 
 ::: callout-tip
 ## Reading a `.gdb` directly — no ArcGIS export needed
@@ -183,14 +173,78 @@ Skip it and everything looks fine: the layers read, print, and plot perfectly ha
 `sf` reads File Geodatabases natively (via GDAL's OpenFileGDB driver), so there's no need to export to shapefile first. That's a good thing: shapefiles truncate field names to 10 characters and flatten some data types, so your attributes are safer straight from the `.gdb`. If you're ever choosing a format for your *own* data, GeoPackage (`.gpkg`) is the friendly modern option.
 :::
 
+#### Check the dimensions
+
+Before going further, look at what came in. Most of the header is what you'd expect: how many features, what shape they are, which CRS. One line is easy to skip past, and it matters:
+
+```{r}
+#| label: check-dims
+st_layers("data/BLDGSCAMPUS.shp")   # geometry_type: "3D Polygon"
+print(buildings, n = 3)             # the header's Dimension line: XY, XYZ
+st_z_range(buildings)               # the Z values, lowest and highest
+```
+
+`XY` means each vertex has two coordinates, x and y. `XYZ` means it also carries a third, **Z**, usually elevation. The buildings layer has both: 1,209 footprints came out of ArcGIS with a Z and 8 without, and some footprints mix 3D and 2D pieces in the same shape. That mix is what breaks later (see the callout below).
+
+The trees are 3D as well: the `st_layers()` listing above said `3D Point`. Every tree has a Z, so that layer isn't mixed. We are making a flat map and have no use for elevation, so `st_zm()` drops the Z from both:
+
+```{r}
+#| label: drop-z
+buildings <- st_zm(buildings)
+trees     <- st_zm(trees)
+
+st_z_range(buildings)     # NULL: no Z left
+```
+
+You can check any layer of your own in three places:
+
+- **`st_layers()`, before you read it.** A `3D` in the geometry type (`3D Point`, `3D Polygon`) means there's a Z.
+- **The `Dimension:` line**, which `st_read()` prints as it reads and which printing the object repeats. `XY` is plain. `XYZ` has elevation, `XYM` has a "measure" (a value such as a milepost), and `XYZM` has both. A list such as `XY, XYZ` means the features don't agree.
+- **`st_z_range()`**, which returns `NULL` when there's no Z.
+
+::: callout-warning
+## `st_zm()` — do this now, or debug it later
+
+Skip it and nothing goes wrong right away. The buildings read, print, plot, and even clip. The trouble is the mix of 3D and 2D shapes. When we reproject in §2.4, `st_transform()` garbles the mixed ones and reports it only as a warning (`Sub-geometry 0 has coordinate dimension 2, but container has 3`). Then the first map that draws the reprojected buildings, in §3, stops with `OGR: Corrupt data / Error: OGR error`, and so does every map after it. Nothing in the error points back to the Z.
+
+If you need the elevations for your own work, keep them, but check that every feature has one.
+:::
+
 ### Focus on main campus
 
-The building and tree layers cover *all* of NC State's property — including farms and field labs an hour from Raleigh. We want the walkable core, so we'll clip everything to **main campus**: the North and Central precincts together. First read in the perimeter shapefile, using the approach above, and work out which column holds the precinct names.
+We only want main campus, but the layers we just read cover more than that. Read in the campus boundaries the same way:
+
+```{r}
+#| label: read-perimeters
+perimeters <- st_read("data/CAMPUSPERIMETER_ALL.shp")
+```
+
+Then draw everything we have so far on one map:
+
+```{r}
+#| label: before-clip
+#| fig-cap: "Everything we've read, before clipping."
+# Draw the buildings first: plot() sizes the map to fit the first layer.
+# lwd = 3 thickens the outlines so a lone footprint still shows up as a dot.
+plot(st_geometry(buildings), border = "grey20", lwd = 3, axes = TRUE)
+plot(st_geometry(perimeters), add = TRUE, border = "grey55")
+plot(st_geometry(trees), add = TRUE, pch = 20, cex = 0.4, col = "forestgreen")
+```
+
+That isn't a map of campus. The buildings layer covers NC State property across the state, plus one footprint in Georgia (bottom left) and one at NC State's campus in Prague (top right), and the map stretches across the Atlantic to fit them all. The axes are in feet, and they run into the tens of millions. North Carolina, with every tree we have, is the cluster in the lower left. The header warned us, too: the buildings' `Bounding box` runs from about 600,000 to 21.5 million feet.
+
+You'll see this often with real data: a layer covers far more than your question does. Map it before you analyze it, and you find out how much more.
+
+::: callout-warning
+## Gotcha
+
+`plot(trees)` *without* `st_geometry()` draws **one map per column** — surprising and slow. Always wrap in `st_geometry()` for a plain map.
+:::
+
+To zoom in on main campus, we clip the layers to the campus boundaries. First, work out which column holds the precinct names:
 
 ```{r}
 #| label: perimeter-inspect
-perimeters <- st_read("data/CAMPUSPERIMETER_ALL.shp")   # <- your filename
-
 names(perimeters)              # which column holds the perimeter name?
 st_drop_geometry(perimeters)   # the actual rows/names to choose from
 ```
@@ -205,7 +259,7 @@ main_campus <- perimeters |>
 # Keep only features that fall on main campus. Subsetting one sf object by
 # another — `layer[boundary, ]` — keeps the features that intersect it. We
 # transform the boundary into each layer's CRS on the fly, so this works even
-# though the files were saved in different coordinate systems.
+# when two files record their coordinate systems differently.
 buildings <- buildings[st_transform(main_campus, st_crs(buildings)), ]
 trees     <- trees[st_transform(main_campus, st_crs(trees)), ]
 
@@ -217,7 +271,17 @@ nrow(buildings)   # 209 footprints
 nrow(trees)       # 1,925 standing trees
 ```
 
-Clipping early, in one place, is what keeps the rest of the session fast and the maps legible — that took us from 4,424 trees statewide down to the 1,925 on the blocks we actually care about.
+Clipping took the buildings from 1,217 footprints to 209, and the trees from 4,424 to the 1,925 still standing on main campus. Draw the map again:
+
+```{r}
+#| label: after-clip
+#| fig-cap: "After clipping: main campus, its buildings, and its trees."
+plot(st_geometry(main_campus), border = "grey55", axes = TRUE)
+plot(st_geometry(buildings), add = TRUE, col = "grey80", border = "grey40")
+plot(st_geometry(trees), add = TRUE, pch = 20, cex = 0.4, col = "forestgreen")
+```
+
+Now you can see campus: the buildings, and the trees lining the streets and quads between them. Clipping early, in one place, is what keeps the rest of the session fast and the maps legible.
 
 ### Join the building attributes
 
@@ -332,7 +396,7 @@ This is the whole mental model. Print one and you'll see a normal table with a s
 trees
 ```
 
-Read the header: geometry **type**, **dimension**, **bounding box** (the extent), and the **CRS**. Then the familiar data frame underneath. Everything you know about data frames still works — the geometry just comes along for the ride.
+Read the header: geometry **type**, **dimension** (`XY`, now that §1.2 dropped the Z), **bounding box** (the extent), and the **CRS**. Then the familiar data frame underneath. Everything you know about data frames still works — the geometry just comes along for the ride.
 
 ### Geometry types
 
@@ -369,41 +433,9 @@ Coordinates are meaningless without knowing the system they're measured in. A pa
 And if two layers are in different CRSs, you must put them on a **common** one before you can overlay or relate them. We do that next.
 :::
 
-------------------------------------------------------------------------
+### Reproject onto a common CRS (in meters) {#sec-transform}
 
-## Explore, then ask one spatial question {#sec-explore}
-
-### Attribute exploration is just the tidyverse
-
-Because it's a data frame, ordinary `dplyr` works. Use `st_drop_geometry()` when you only care about the attributes — it's faster and stops the geometry from tagging along through every summary.
-
-```{r}
-#| label: eda
-trees |>
-  st_drop_geometry() |>
-  count(common, sort = TRUE)     # most common tree species on campus
-```
-
-### A fast look at the geometry
-
-`plot()` for a quick glance — but wrap it in `st_geometry()`:
-
-```{r}
-#| label: base-plot
-#| fig-cap: "Fast base-R look. `st_geometry()` draws shapes only."
-plot(st_geometry(buildings), col = "grey80", border = "grey40")
-plot(st_geometry(trees), add = TRUE, pch = 20, cex = 0.4, col = "forestgreen")
-```
-
-::: callout-warning
-## Gotcha
-
-`plot(trees)` *without* `st_geometry()` draws **one map per column** — surprising and slow. Always wrap in `st_geometry()` for a plain map.
-:::
-
-### Reproject onto a common CRS (in meters)
-
-We're about to measure a distance — "within 100 meters" — and you cannot do that in degrees. So we put all three layers onto one *projected* CRS. **UTM Zone 17N (EPSG:32617)** is a clean, metric choice for central NC:
+In §3 we'll measure a distance — "within 100 meters" — and you cannot do that in degrees. So we put all three layers onto one *projected* CRS. **UTM Zone 17N (EPSG:32617)** is a clean, metric choice for central NC:
 
 ```{r}
 #| label: transform
@@ -414,7 +446,38 @@ places_m    <- st_transform(places,    32617)
 st_crs(trees_m)$units_gdal    # now "metre" — and all three layers match
 ```
 
-*(If `st_crs()` ever comes back empty for a layer, its CRS wasn't recorded — set it with `st_set_crs()` to the correct code before transforming.)*
+From here on we use the `_m` layers. *(If `st_crs()` ever comes back empty for a layer, its CRS wasn't recorded — set it with `st_set_crs()` to the correct code before transforming.)*
+
+::: callout-tip
+## How do you know which EPSG code to use?
+
+An EPSG code is a short ID for a full CRS definition. `st_crs(32617)` prints the whole definition, including its units and the part of the world it's meant for. To find a code:
+
+- **Search by place.** [epsg.io](https://epsg.io) and [spatialreference.org](https://spatialreference.org) take a place name ("North Carolina") and list the systems made for it, with their units and area of use.
+- **Ask R.** The `crsuggest` package looks at where your data is and suggests projected CRSs that fit it: `crsuggest::suggest_crs(places)`. It's a separate install.
+
+For a map of one city or region, two families are almost always a good choice:
+
+- **UTM** splits the world into 60 north–south zones, each 6° of longitude wide, measured in meters. The zone number is `floor((longitude + 180) / 6) + 1`, so Raleigh, at −78.7°, is in zone 17. The code is 326 plus the zone number north of the equator (32617) and 327 plus the zone number south of it.
+- **State Plane** is a US system with one or more zones per state, each tuned to be accurate there. North Carolina's is EPSG:32119 in meters, or EPSG:2264 in US feet, which is what the campus files already use.
+
+Either would work here. For a whole country or continent, where areas need to stay true, use an equal-area projection instead (EPSG:5070 for the lower 48 US states).
+:::
+
+------------------------------------------------------------------------
+
+## Explore, then ask one spatial question {#sec-explore}
+
+### Attribute exploration is just the tidyverse
+
+Because it's a data frame, ordinary `dplyr` works. Use `st_drop_geometry()` when you only care about the attributes — it's faster and stops the geometry from tagging along through every summary.
+
+```{r}
+#| label: eda
+trees_m |>
+  st_drop_geometry() |>
+  count(common, sort = TRUE)     # most common tree species on campus
+```
 
 ### The spatial question — which place is the shadiest? {#sec-join}
 
@@ -424,9 +487,10 @@ It takes two steps. Grow each landmark into a circle using a buffer, then count 
 
 ```{r}
 #| label: buffer-count
-# Step 1 — a buffer turns each point into a 100 m circle. `dist` is in the
-# CRS's units, which is exactly why we projected to meters first.
-shade <- st_buffer(places_m, dist = 100)
+# Step 1 — a buffer turns each point into a circle. `dist` is in the CRS's
+# units, which is exactly why we projected to meters first.
+radius <- 100                                  # meters
+shade  <- st_buffer(places_m, dist = radius)
 
 # Step 2 — for each circle, which trees fall inside it?
 #   st_intersects() hands back a list with one element per circle, holding the
@@ -467,7 +531,7 @@ Look at where the circles overlap: the tint doubles up, and so does the count. A
 ::: callout-important
 ## The radius is a decision, not a fact
 
-Change the buffer and you can change the answer. At **50 m** the Memorial Belltower wins with 20 trees. At **100 m** the Court of North Carolina takes it with 81. At **150 m** the Court holds the lead but everything behind it reshuffles. None of those is wrong — they answer subtly different questions: *right at the monument* versus *in the surrounding block*.
+Change the buffer and you can change the answer. (Try it: set `radius` to 50 or 150 and re-run the chunk.) At **50 m** the Memorial Belltower wins with 20 trees. At **100 m** the Court of North Carolina takes it with 81. At **150 m** the Court holds the lead but everything behind it reshuffles. None of those is wrong — they answer subtly different questions: *right at the monument* versus *in the surrounding block*.
 
 So pick your radius deliberately, and be ready to justify it. Ours is 100 m because that's roughly a one-minute walk — about the range over which shade actually influences where you'd choose to sit. Reporting "the shadiest spot on campus" without naming the radius is the spatial-analysis equivalent of a bar chart with no y-axis.
 :::
@@ -498,7 +562,7 @@ First, pull out the pieces the map needs:
 winner    <- shade |> slice_max(n_trees, n = 1)        # the winning buffer + its count
 winner_pt <- places_m |> filter(name == winner$name)   # the landmark itself
 
-# The map window: the 100 m circle plus a little breathing room.
+# The map window: the circle plus a little breathing room.
 view <- st_bbox(st_buffer(winner, 60))
 
 # Label the halls that actually border the quad — the buildings whose
@@ -597,7 +661,7 @@ ggplot() +
                          style = north_arrow_minimal()) +
   labs(
     title    = paste0("The shadiest spot on campus: ", winner$name),
-    subtitle = paste0(winner$n_trees, " inventoried trees within 100 m — ",
+    subtitle = paste0(winner$n_trees, " inventoried trees within ", radius, " m — ",
                       "more than any other landmark on main campus"),
     caption  = "Data: NC State University, Campus Planning & Strategic Investment · Made in R with sf + ggplot2"
   ) +
@@ -610,7 +674,7 @@ ggplot() +
   )
 ```
 
-Notice that the title and subtitle are *computed* from `winner`, not typed. Change the buffer radius in §3 and the map retitles itself — including if the winner changes.
+Notice that the title and subtitle are *computed* from `winner` and `radius`, not typed. Change `radius` in §3 and the map retitles itself — including if the winner changes.
 
 Save it at print resolution:
 
@@ -638,6 +702,7 @@ In one session we went from "what is spatial data?" to a finished map:
 - an `sf` object is a **data frame with a geometry column**
 - the **CRS** tells R what the coordinates mean — check it, and put layers on a common *projected* CRS before you measure anything
 - data comes in via **`st_read()`** (shapefiles, geodatabases), **`st_as_sf()`** (coordinate spreadsheets), and an ordinary **`left_join()`** for attribute tables
+- **look before you analyze**: a quick `plot()` shows what a layer covers, and the `Dimension:` line shows whether it carries a Z to drop with `st_zm()`
 - **clipping to a study area** early, in one place, is what keeps a campus map legible
 - **`st_buffer()` + `st_intersects()`** answered a question no attribute table could: which place has the most trees around it
 - **`geom_sf()` + `ggspatial`** turn layers into a publishable map
@@ -651,7 +716,7 @@ In one session we went from "what is spatial data?" to a finished map:
 ### Take it further (good exercises)
 
 - Map **your own** CSV of sites: `read.csv()` → `st_as_sf()` → `geom_sf()`.
-- Re-run the shade question at a different radius and see whether the winner survives it.
+- Change `radius` in §3 and see whether the winner survives it.
 - Rank by *canopy* instead of by count — swap `lengths(st_intersects(...))` for a `st_join()` and `sum(dbh, na.rm = TRUE)` per landmark. Does the Brickyard's handful of big trees change its standing?
 - Flip the question with `st_nearest_feature()`: assign every tree to its closest landmark, then `count()`.
 - Color the trees by species (`aes(color = common)`) — you'll need to lump the long tail into "Other" first, or the legend will run off the page.
@@ -726,7 +791,8 @@ ggplot() +
            expand = FALSE) +
   annotation_scale(location = "bl", width_hint = 0.28,
                    text_col = "grey80", line_col = "grey80") +
-  labs(title = "Court of North Carolina", subtitle = "81 trees within 100 m") +
+  labs(title = winner$name,
+       subtitle = paste0(winner$n_trees, " trees within ", radius, " m")) +
   theme_void() +
   theme(
     plot.background = element_rect(fill = "grey8", color = NA),

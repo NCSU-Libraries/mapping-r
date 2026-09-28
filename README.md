@@ -87,8 +87,9 @@ R is in the wrong working directory. Run `getwd()` to see where it thinks it is.
 Run the `install.packages()` line above.
 
 **`OGR: Corrupt data` or `Error: OGR error` partway through**
-An `st_zm()` got skipped. The buildings and tree layers carry an unused elevation coordinate that some
-spatial operations choke on. The worksheet calls `st_zm()` where it is needed; see the callout in §1.2.
+An `st_zm()` got skipped. Most building footprints carry an elevation coordinate and a few don't, and
+that mix breaks the maps once the buildings are reprojected. §1.2 shows how to check a layer for it
+and drop it with `st_zm()`.
 
 **Rendering the teaching file fails**
 That is expected while any `____` is still empty, because `____` is not valid R. Run chunks one at a

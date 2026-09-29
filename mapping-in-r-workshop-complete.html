@@ -2218,8 +2218,9 @@ vertical-align: -.125em;
   <li><a href="#sec-anatomy" id="toc-sec-anatomy" class="nav-link" data-scroll-target="#sec-anatomy"><span class="header-section-number">2</span> What makes data “spatial”?</a></li>
   <li><a href="#sec-explore" id="toc-sec-explore" class="nav-link" data-scroll-target="#sec-explore"><span class="header-section-number">3</span> Explore, then ask one spatial question</a></li>
   <li><a href="#sec-map" id="toc-sec-map" class="nav-link" data-scroll-target="#sec-map"><span class="header-section-number">4</span> Making the map — the main event</a></li>
-  <li><a href="#wrap-up-where-to-go-next" id="toc-wrap-up-where-to-go-next" class="nav-link" data-scroll-target="#wrap-up-where-to-go-next"><span class="header-section-number">5</span> Wrap-up &amp; where to go next</a></li>
+  <li><a href="#wrap-up" id="toc-wrap-up" class="nav-link" data-scroll-target="#wrap-up"><span class="header-section-number">5</span> Wrap-up</a></li>
   <li><a href="#before-you-go" id="toc-before-you-go" class="nav-link" data-scroll-target="#before-you-go"><span class="header-section-number">6</span> Before You Go</a></li>
+  <li><a href="#where-to-go-next" id="toc-where-to-go-next" class="nav-link" data-scroll-target="#where-to-go-next"><span class="header-section-number">7</span> Where to go next</a></li>
   </ul>
 </nav>
 </div>
@@ -3472,8 +3473,8 @@ First 10 features:
 <hr>
 </section>
 </section>
-<section id="wrap-up-where-to-go-next" class="level2" data-number="5">
-<h2 data-number="5" class="anchored" data-anchor-id="wrap-up-where-to-go-next"><span class="header-section-number">5</span> Wrap-up &amp; where to go next</h2>
+<section id="wrap-up" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="wrap-up"><span class="header-section-number">5</span> Wrap-up</h2>
 <p>In one session we went from “what is spatial data?” to a finished map:</p>
 <ul>
 <li>an <code>sf</code> object is a <strong>data frame with a geometry column</strong></li>
@@ -3484,16 +3485,32 @@ First 10 features:
 <li><strong><code>st_buffer()</code> + <code>st_intersects()</code></strong> answered a question no attribute table could: which place has the most trees around it</li>
 <li><strong><code>geom_sf()</code> + <code>ggspatial</code></strong> turn layers into a publishable map</li>
 </ul>
-<section id="resources" class="level3" data-number="5.1">
-<h3 data-number="5.1" class="anchored" data-anchor-id="resources"><span class="header-section-number">5.1</span> Resources</h3>
+<hr>
+</section>
+<section id="before-you-go" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="before-you-go"><span class="header-section-number">6</span> Before You Go</h2>
+<section id="evaluate-our-workshop" class="level3" data-number="6.1">
+<h3 data-number="6.1" class="anchored" data-anchor-id="evaluate-our-workshop"><span class="header-section-number">6.1</span> Evaluate our Workshop</h3>
+<p>We appreciate your input. Let us know how this Workshop went for you! We take your input seriously and appreciate the time you take to give it. Please fill out <a href="https://go.ncsu.edu/dss-workshop-eval">our workshop evaluation</a>.</p>
+</section>
+<section id="need-additional-help" class="level3" data-number="6.2">
+<h3 data-number="6.2" class="anchored" data-anchor-id="need-additional-help"><span class="header-section-number">6.2</span> Need Additional Help?</h3>
+<p>We are available to help you with whatever question you have about this Workshop or programming in general. If you run into snags or questions (we all do), as you start to create programs for yourself, reach out to <a href="https://go.ncsu.edu/getdatahelp">Get Data Help</a>. Send an email, make an appointment, or reserve a workstation! We are here to assist you to be successful in your data science journey.</p>
+<hr>
+</section>
+</section>
+<section id="where-to-go-next" class="level2" data-number="7">
+<h2 data-number="7" class="anchored" data-anchor-id="where-to-go-next"><span class="header-section-number">7</span> Where to go next</h2>
+<section id="resources" class="level3" data-number="7.1">
+<h3 data-number="7.1" class="anchored" data-anchor-id="resources"><span class="header-section-number">7.1</span> Resources</h3>
 <ul>
 <li><strong>Geocomputation with R</strong> — free online, the standard reference: <a href="https://r.geocompx.org/" class="uri">https://r.geocompx.org/</a></li>
 <li><strong><code>sf</code> documentation &amp; vignettes</strong> — <a href="https://r-spatial.github.io/sf/" class="uri">https://r-spatial.github.io/sf/</a></li>
 <li><strong>r-spatial.org</strong> — news and deeper dives from the maintainers</li>
 </ul>
 </section>
-<section id="take-it-further-good-exercises" class="level3" data-number="5.2">
-<h3 data-number="5.2" class="anchored" data-anchor-id="take-it-further-good-exercises"><span class="header-section-number">5.2</span> Take it further (good exercises)</h3>
+<section id="take-it-further-good-exercises" class="level3" data-number="7.2">
+<h3 data-number="7.2" class="anchored" data-anchor-id="take-it-further-good-exercises"><span class="header-section-number">7.2</span> Take it further (good exercises)</h3>
 <ul>
 <li>Map <strong>your own</strong> CSV of sites: <code>read.csv()</code> → <code>st_as_sf()</code> → <code>geom_sf()</code>.</li>
 <li>Change <code>radius</code> in §3 and see whether the winner survives it.</li>
@@ -3502,8 +3519,8 @@ First 10 features:
 <li>Color the trees by species (<code>aes(color = common)</code>) — you’ll need to lump the long tail into “Other” first, or the legend will run off the page.</li>
 </ul>
 </section>
-<section id="bonus-putting-your-points-on-a-basemap" class="level3" data-number="5.3">
-<h3 data-number="5.3" class="anchored" data-anchor-id="bonus-putting-your-points-on-a-basemap"><span class="header-section-number">5.3</span> Bonus — putting your points on a basemap</h3>
+<section id="bonus-putting-your-points-on-a-basemap" class="level3" data-number="7.3">
+<h3 data-number="7.3" class="anchored" data-anchor-id="bonus-putting-your-points-on-a-basemap"><span class="header-section-number">7.3</span> Bonus — putting your points on a basemap</h3>
 <p>We didn’t cover this in the hour, but it’s the most common follow-up question: <em>how do I get my points on top of satellite imagery, or a street map?</em></p>
 <p><strong>The current go-to is <a href="https://cran.r-project.org/package=maptiles"><code>maptiles</code></a></strong>, paired with <code>tidyterra</code> for the drawing. There’s no single package in R, but <code>maptiles</code> is actively maintained, covers a long list of providers, and does the one thing that used to be painful: it hands back a raster <strong>already reprojected into your layer’s CRS</strong>, so you don’t have to think about Web Mercator at all.</p>
 <div class="cell">
@@ -3555,8 +3572,8 @@ First 10 features:
 <p><code>names(maptiles::get_providers())</code> lists everything available.</p>
 </div>
 </div>
-<section id="a-black-background-map-needs-no-basemap-at-all" class="level4" data-number="5.3.1">
-<h4 data-number="5.3.1" class="anchored" data-anchor-id="a-black-background-map-needs-no-basemap-at-all"><span class="header-section-number">5.3.1</span> A black-background map needs no basemap at all</h4>
+<section id="a-black-background-map-needs-no-basemap-at-all" class="level4" data-number="7.3.1">
+<h4 data-number="7.3.1" class="anchored" data-anchor-id="a-black-background-map-needs-no-basemap-at-all"><span class="header-section-number">7.3.1</span> A black-background map needs no basemap at all</h4>
 <p>Since every dark tile provider now wants a key, the easier route to a dark map is to just style one — no account, no network, no attribution to track:</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb92"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb92-1"><a href="#cb92-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>() <span class="sc">+</span></span>
@@ -3583,25 +3600,14 @@ First 10 features:
 </div>
 <p>The trick is that on a dark ground <strong>every</strong> piece of text needs its color set explicitly — title, subtitle, legend, and the scale bar’s <code>text_col</code>/<code>line_col</code>. Miss one and it stays near-black and vanishes.</p>
 </section>
-<section id="other-routes-worth-knowing" class="level4" data-number="5.3.2">
-<h4 data-number="5.3.2" class="anchored" data-anchor-id="other-routes-worth-knowing"><span class="header-section-number">5.3.2</span> Other routes worth knowing</h4>
+<section id="other-routes-worth-knowing" class="level4" data-number="7.3.2">
+<h4 data-number="7.3.2" class="anchored" data-anchor-id="other-routes-worth-knowing"><span class="header-section-number">7.3.2</span> Other routes worth knowing</h4>
 <ul>
 <li><strong><code>ggspatial::annotation_map_tile()</code></strong> — you already have <code>ggspatial</code> loaded, and this pulls OSM tiles through <code>rosm</code> in a single layer. Fewer providers than <code>maptiles</code>, but nothing extra to install.</li>
 <li><strong><code>mapview</code> / <code>leaflet</code></strong> — for a zoomable map in your browser rather than a static figure. The right tool for exploring your own data; the wrong one for a figure in a paper.</li>
 </ul>
-</section>
-</section>
-</section>
-<section id="before-you-go" class="level2" data-number="6">
-<h2 data-number="6" class="anchored" data-anchor-id="before-you-go"><span class="header-section-number">6</span> Before You Go</h2>
-<section id="evaluate-our-workshop" class="level3" data-number="6.1">
-<h3 data-number="6.1" class="anchored" data-anchor-id="evaluate-our-workshop"><span class="header-section-number">6.1</span> Evaluate our Workshop</h3>
-<p>We appreciate your input. Let us know how this Workshop went for you! We take your input seriously and appreciate the time you take to give it. Please fill out <a href="https://go.ncsu.edu/dss-workshop-eval">our workshop evaluation</a>.</p>
-</section>
-<section id="need-additional-help" class="level3" data-number="6.2">
-<h3 data-number="6.2" class="anchored" data-anchor-id="need-additional-help"><span class="header-section-number">6.2</span> Need Additional Help?</h3>
-<p>We are available to help you with whatever question you have about this Workshop or programming in general. If you run into snags or questions (we all do), as you start to create programs for yourself, reach out to <a href="https://go.ncsu.edu/getdatahelp">Get Data Help</a>. Send an email, make an appointment, or reserve a workstation! We are here to assist you to be successful in your data science journey.</p>
 <hr>
+</section>
 </section>
 </section>
 

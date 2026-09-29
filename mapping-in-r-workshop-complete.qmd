@@ -754,7 +754,7 @@ ggsave("shadiest_spot.png", width = 8.4, height = 7, dpi = 300)
 
 ------------------------------------------------------------------------
 
-## Wrap-up & where to go next
+## Wrap-up
 
 In one session we went from "what is spatial data?" to a finished map:
 
@@ -765,6 +765,22 @@ In one session we went from "what is spatial data?" to a finished map:
 - **clipping to a study area** early, in one place, is what keeps a campus map legible
 - **`st_buffer()` + `st_intersects()`** answered a question no attribute table could: which place has the most trees around it
 - **`geom_sf()` + `ggspatial`** turn layers into a publishable map
+
+------------------------------------------------------------------------
+
+## Before You Go
+
+### Evaluate our Workshop
+
+We appreciate your input. Let us know how this Workshop went for you! We take your input seriously and appreciate the time you take to give it. Please fill out [our workshop evaluation](https://go.ncsu.edu/dss-workshop-eval).
+
+### Need Additional Help?
+
+We are available to help you with whatever question you have about this Workshop or programming in general. If you run into snags or questions (we all do), as you start to create programs for yourself, reach out to [Get Data Help](https://go.ncsu.edu/getdatahelp). Send an email, make an appointment, or reserve a workstation! We are here to assist you to be successful in your data science journey.
+
+------------------------------------------------------------------------
+
+## Where to go next
 
 ### Resources
 
@@ -868,15 +884,5 @@ The trick is that on a dark ground **every** piece of text needs its color set e
 
 - **`ggspatial::annotation_map_tile()`** — you already have `ggspatial` loaded, and this pulls OSM tiles through `rosm` in a single layer. Fewer providers than `maptiles`, but nothing extra to install.
 - **`mapview` / `leaflet`** — for a zoomable map in your browser rather than a static figure. The right tool for exploring your own data; the wrong one for a figure in a paper.
-
-## Before You Go
-
-### Evaluate our Workshop
-
-We appreciate your input. Let us know how this Workshop went for you! We take your input seriously and appreciate the time you take to give it. Please fill out [our workshop evaluation](https://go.ncsu.edu/dss-workshop-eval).
-
-### Need Additional Help?
-
-We are available to help you with whatever question you have about this Workshop or programming in general. If you run into snags or questions (we all do), as you start to create programs for yourself, reach out to [Get Data Help](https://go.ncsu.edu/getdatahelp). Send an email, make an appointment, or reserve a workstation! We are here to assist you to be successful in your data science journey.
 
 ------------------------------------------------------------------------

@@ -354,7 +354,7 @@ Worth proving to yourself that the points landed where you meant them to:
 # Plotting the points FIRST sets the extent; the boundary then draws into that
 # window. Draw the perimeter first instead and campus shrinks to a dot — that
 # layer covers NC State property statewide, out to the farms and field labs.
-plot(st_geometry(places), pch = 19, col = "firebrick", axes = TRUE)
+plot(st_geometry(places), pch = 19, col = "#7B3294", axes = TRUE)
 plot(st_geometry(st_transform(perimeters, 4326)), add = TRUE, border = "grey55")
 ```
 
@@ -437,7 +437,7 @@ A map won't necessarily tell you. `ggplot()` reprojects every layer to match the
 #| label: crs-plot
 #| fig-cap: "The landmarks are on this map too, about two million units off its left edge."
 plot(st_geometry(trees), pch = 20, cex = 0.3, col = "forestgreen", axes = TRUE)
-plot(st_geometry(places), add = TRUE, pch = 19, col = "firebrick")   # nothing appears
+plot(st_geometry(places), add = TRUE, pch = 19, col = "#7B3294")   # nothing appears
 
 st_coordinates(places[1, ])   # degrees: about -78.66, 35.79
 st_coordinates(trees[1, ])    # feet:    about 2,098,056, 741,280
@@ -560,9 +560,9 @@ focus <- st_bbox(st_buffer(places_m, 250))
 ggplot() +
   geom_sf(data = buildings_m, fill = "grey93", color = "grey84", linewidth = 0.15) +
   geom_sf(data = trees_m, color = "forestgreen", size = 0.35, alpha = 0.5) +
-  geom_sf(data = shade, fill = "firebrick", alpha = 0.10,
-          color = "firebrick", linetype = "dashed", linewidth = 0.5) +
-  geom_sf(data = places_m, color = "firebrick", size = 2) +
+  geom_sf(data = shade, fill = "#7B3294", alpha = 0.10,
+          color = "#7B3294", linetype = "dashed", linewidth = 0.5) +
+  geom_sf(data = places_m, color = "#7B3294", size = 2) +
   coord_sf(xlim = focus[c("xmin", "xmax")], ylim = focus[c("ymin", "ymax")]) +
   theme_minimal()
 ```
@@ -676,7 +676,7 @@ ggplot() +
   geom_sf(data = winner, fill = NA, color = "grey35", linetype = "dashed",
           linewidth = 0.4) +
   geom_sf(data = trees_m, aes(size = dbh), color = "forestgreen", alpha = 0.7) +
-  geom_sf(data = winner_pt, color = "firebrick", size = 3, shape = 18) +
+  geom_sf(data = winner_pt, color = "#7B3294", size = 3, shape = 18) +
   geom_sf_text(data = edge_labels, aes(label = name), size = 2.3, color = "grey30",
                fontface = "italic", check_overlap = TRUE) +
   scale_size_continuous(range = c(0.4, 3.4), name = "Trunk dia. (in)") +
@@ -707,11 +707,11 @@ ggplot() +
   geom_sf(data = winner, fill = NA, color = "grey35", linetype = "dashed",
           linewidth = 0.4) +
   geom_sf(data = trees_m, aes(size = dbh), color = "forestgreen", alpha = 0.7) +
-  geom_sf(data = winner_pt, color = "firebrick", size = 3, shape = 18) +
+  geom_sf(data = winner_pt, color = "#7B3294", size = 3, shape = 18) +
   geom_sf_text(data = edge_labels, aes(label = name), size = 2.3, color = "grey30",
                fontface = "italic", check_overlap = TRUE) +
   geom_sf_label(data = winner_pt, aes(label = name), size = 2.9, nudge_y = 26,
-                fill = "white", color = "firebrick", linewidth = 0.2) +
+                fill = "white", color = "#7B3294", linewidth = 0.2) +
   scale_size_continuous(range = c(0.4, 3.4), name = "Trunk dia. (in)") +
   coord_sf(xlim = view[c("xmin", "xmax")], ylim = view[c("ymin", "ymax")],
            expand = FALSE) +
@@ -749,7 +749,7 @@ ggsave("shadiest_spot.png", width = 8.4, height = 7, dpi = 300)
 - **Let context recede.** Buildings are grey so the trees read first. The eye should land on what the map is *about*.
 - **Draw the evidence.** The dashed circle isn't decoration — it's the rule behind the claim, put where a reader can check it.
 - **Account for what's missing.** `dbh` is blank for 17 of these trees, and `aes(size = dbh)` drops them silently (with a warning you'll scroll past). For anything you publish, decide on purpose: give them a fixed small size, or note the exclusion in the caption.
-- **Choose colorblind-safe palettes.** This map uses a single hue, so it dodges the issue — but the moment you color by species, reach for `viridis` or `Dark2` and avoid raw red/green contrasts.
+- **Choose colorblind-safe colors.** Red against green is the pair colorblind readers most often can't tell apart, so the landmark here is purple, not red: the purple end of a purple–green scheme from [ColorBrewer](https://colorbrewer2.org), which marks the schemes that stay distinct for colorblind readers. The landmark also differs from the trees in shape, size and label, so color isn't doing the work alone. When you color by species, reach for `viridis` or `Dark2`.
 :::
 
 ------------------------------------------------------------------------
@@ -803,7 +803,7 @@ ggplot() +
   geom_sf(data = winner, fill = NA, color = "white",
           linetype = "dashed", linewidth = 0.6) +
   geom_sf(data = trees_m, aes(size = dbh), color = "yellow", alpha = 0.85) +
-  geom_sf(data = winner_pt, color = "firebrick", size = 3.5, shape = 18) +
+  geom_sf(data = winner_pt, color = "#D6A6FF", size = 3.5, shape = 18) +
   scale_size_continuous(range = c(0.4, 3.2), name = "Trunk dia. (in)") +
   coord_sf(xlim = view[c("xmin", "xmax")], ylim = view[c("ymin", "ymax")],
            expand = FALSE) +
@@ -844,7 +844,7 @@ ggplot() +
   geom_sf(data = winner, fill = "white", alpha = 0.05, color = "grey75",
           linetype = "dashed", linewidth = 0.5) +
   geom_sf(data = trees_m, aes(size = dbh), color = "springgreen3", alpha = 0.9) +
-  geom_sf(data = winner_pt, color = "firebrick1", size = 3.5, shape = 18) +
+  geom_sf(data = winner_pt, color = "#D6A6FF", size = 3.5, shape = 18) +
   scale_size_continuous(range = c(0.4, 3.2), name = "Trunk dia. (in)") +
   coord_sf(xlim = view[c("xmin", "xmax")], ylim = view[c("ymin", "ymax")],
            expand = FALSE) +

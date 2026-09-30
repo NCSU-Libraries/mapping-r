@@ -2,9 +2,8 @@
 /.quarto/
 /*_files/
 
-# The rendered complete worksheet IS committed on purpose, so people can read
-# it without running R. The teaching version can't render (it has ____ blanks).
-/mapping-in-r-workshop-teaching.html
+# The rendered worksheet (mapping-in-r-workshop.html) IS committed on purpose,
+# so people can read it without running R. GitHub Pages serves it.
 
 # R session junk
 Rplots.pdf

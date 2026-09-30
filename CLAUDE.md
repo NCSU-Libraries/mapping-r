@@ -11,8 +11,8 @@ them, apart from the files `.gitattributes` marks `export-ignore` (this file and
   out, and facilitators code examples live in the Console instead.
 - Facilitator notes (timing, what to slow down for, live demos) live in `FACILITATOR.md`, not in the
   worksheet. Its section numbers are typed by hand, so check them when headings move.
-- The hidden `final-map-image` chunk saves `images/final-map.png`, but only while rendering
-  (`knitr.in.progress`), so attendees running chunks don't overwrite it.
+- A hidden chunk (`include: false`) right after the finished map saves `images/final-map.png`, but only
+  while rendering (`knitr.in.progress`), so attendees running chunks don't overwrite it.
 
 ## How each step is laid out
 
@@ -21,6 +21,8 @@ them, apart from the files `.gitattributes` marks `export-ignore` (this file and
 - After a chunk, only callouts titled "Gotcha: …" (`callout-warning`) or "Extra: …" (`callout-tip`).
 - Code comments go on their own line above the code they describe, never at the end of a line. No
   alignment spaces in code (`x <- 1`, not `x   <- 1`).
+- Chunks carry no `#| label:` lines. Keep only chunk options that change the output (`fig-cap`,
+  `fig-width`/`fig-height`, `eval`, `error`, `include`).
 
 ## Section references
 

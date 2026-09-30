@@ -32,15 +32,14 @@ You do not need a GitHub account.
 
    Either way, R points at the project folder. That is what makes the file paths in the worksheet work.
 
-3. Open `mapping-in-r-workshop-teaching.qmd` and follow along.
+3. Open `mapping-in-r-workshop.qmd` and follow along.
 
 ## Files in this folder
 
 | File | What it is |
 |---|---|
-| `mapping-in-r-workshop-teaching.qmd` | The worksheet we use in the session. Almost all the code is written for you. A few pieces in §3 are left blank (`____`) to fill in as we go. Start here. |
-| `mapping-in-r-workshop-complete.qmd` | The same document with the blanks filled in. Use it if you fall behind, or as a reference afterward. |
-| `mapping-in-r-workshop-complete.html` | The complete version, already run. Open it in a browser to read the whole thing and see the finished maps without running any code. |
+| `mapping-in-r-workshop.qmd` | The worksheet we use in the session. All the code is written for you. Start here. |
+| `mapping-in-r-workshop.html` | The same worksheet, already run. Open it in a browser to read the whole thing and see the finished maps without running any code. It is also online at the link above. |
 | `mapping-r.Rproj` | Project file. Sets the working directory. Positron users open the folder instead. |
 | `data/` | The five datasets. Do not rename anything inside. |
 | `images/` | The pictures in the worksheet. Each one is credited where it appears. |
@@ -98,10 +97,6 @@ R is in the wrong working directory. Run `getwd()` to see where it thinks it is.
 **"there is no package called 'readxl'"**
 Run the `install.packages()` line above.
 
-**Rendering the teaching file fails**
-That is expected while any `____` in §3 is still empty, because `____` is not valid R. Run chunks one
-at a time with the play button. Render once you have filled everything in.
-
 ## Going further
 
 - Geocomputation with R, free online: <https://r.geocompx.org/>
@@ -135,6 +130,7 @@ Each one keeps its own license, and the worksheet credits it where it appears.
 | `geographic-vs-projected.png` | ArcGIS Pro documentation, "Coordinate systems, map projections, and transformations" | © Esri, used under Esri's terms for noncommercial teaching |
 | `intersects.png` | *Introduction to PostGIS*, ch. 11, Paul Ramsey, Mark Leslie and PostGIS contributors | CC BY-SA 3.0 |
 | `left-join.gif` | Garrick Aden-Buie, tidyexplain | CC0 |
+| `sf-horst.jpg` | Artwork by Allison Horst, stats-illustrations | CC BY 4.0 |
 
 `final-map.png` is made by the worksheet itself, and `rstudio-panes-labeled.png` is our own screenshot.
 Both are covered by the MIT license like the rest of the repo.

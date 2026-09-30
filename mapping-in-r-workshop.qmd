@@ -1,6 +1,6 @@
 ---
 title: "Mapping in R"
-subtitle: "Worksheet for the live session"
+subtitle: "Understanding spatial data and making a good map with `sf`"
 author: "NC State University Libraries — Data Science Services"
 date: today
 format:
@@ -19,12 +19,11 @@ execute:
 ::: callout-important
 ## How to use this file
 
-This is the **worksheet** we use in the session. Almost all of the code is already written. Run each chunk as we talk it through.
+This is the worksheet we use in the session. All of the code is written for you. Run each chunk as we talk it through, and try things out in the Console as we go.
 
-- **Run chunks one at a time** with the green ▶ button, or *Cmd/Ctrl + Shift + Enter*.
-- **A few pieces are blank**, marked `____`. They're all in §3, where we put the layers on a common coordinate reference system, and each one has a hint in the comment above it.
-- **Don't use Render until the very end.** `____` isn't valid R, so rendering fails while any blank is still empty.
-- **If you fall behind, don't panic.** Open `mapping-in-r-workshop-complete.qmd` in this same folder, copy the line you're missing, and carry on.
+- **Run chunks one at a time, from the top down,** with the green ▶ button or *Cmd/Ctrl + Shift + Enter*. Later chunks use objects that earlier ones make.
+- **The finished version is online** at <https://ncsu-libraries.github.io/mapping-r/>, with every map already drawn. Use it to catch up if you fall behind.
+- **Render** runs every chunk and turns the file into a web page. You can do it at the end, but you don't need to.
 :::
 
 ## Welcome {.unnumbered}
@@ -42,23 +41,23 @@ By the end of this hour you will be able to:
 
 This is the map we'll finish with:
 
-![The finished map from §5.](images/final-map.png){fig-alt="The finished map: the winning landmark with its dashed circle, the trees inside it sized by trunk diameter, and the building footprints around it." width="85%"}
+![The finished map from @sec-map.](images/final-map.png){fig-alt="The finished map: the winning landmark with its dashed circle, the trees inside it sized by trunk diameter, and the building footprints around it." width="85%"}
 
 To get there, we'll:
 
 1.  **Get oriented** in RStudio and in this worksheet.
-2.  **Learn a little GIS**: raster and vector data, and coordinate reference systems. (§1)
-3.  **Read four kinds of files into R**: a shapefile, a geodatabase, an Excel sheet and a CSV. Then clip them to main campus. (§2)
-4.  **Look at what makes the data spatial in R**, and put every layer on the same coordinate reference system. (§3)
-5.  **Ask the spatial question**: draw a 100 m circle around each landmark and count the trees inside it. (§4)
-6.  **Make the map.** (§5)
-7.  **Take home a checklist** for loading your own data. (§6)
+2.  **Learn a little GIS**: raster and vector data, and coordinate reference systems. (@sec-gis)
+3.  **Read four kinds of files into R**: a shapefile, a geodatabase, an Excel sheet and a CSV. Then clip them to main campus. (@sec-data)
+4.  **Look at what makes the data spatial in R**, and put every layer on the same coordinate reference system. (@sec-anatomy)
+5.  **Ask the spatial question**: draw a 100 m circle around each landmark and count the trees inside it. (@sec-explore)
+6.  **Make the map.** (@sec-map)
+7.  **Take home a checklist** for loading your own data. (@sec-checklist)
 
 ------------------------------------------------------------------------
 
 ## Find your way around RStudio {.unnumbered}
 
-This worksheet is written for RStudio. Posit Cloud runs RStudio in a web browser, so everything here looks the same there.
+This worksheet is written for RStudio. Here's a quick tour before we start.
 
 ### The four panes {.unnumbered}
 
@@ -79,7 +78,7 @@ This worksheet is a Quarto document, a `.qmd` file. It keeps two things in one p
 
 - **Run a chunk:** click the green ▶ at the chunk's top right, or put your cursor in it and press Cmd/Ctrl + Shift + Enter.
 - **Run one line:** put your cursor on it and press Cmd/Ctrl + Enter.
-- **Render:** the **Render** button runs every chunk from top to bottom and turns the whole file into a web page. That's how `mapping-in-r-workshop-complete.html` in this folder was made.
+- **Render:** the **Render** button runs every chunk from top to bottom and turns the whole file into a web page. That's how `mapping-in-r-workshop.html` in this folder was made.
 
 Inside a chunk, a line that starts with `#` is a comment, which R skips. We use comments to say what the next line does. Lines that start with `#|` are chunk options: `#| label:` names the chunk, and `#| fig-cap:` gives a map its caption.
 
@@ -94,14 +93,16 @@ For a one-page overview of the format, see the [Quarto cheatsheet](https://rstud
 
 ## Setup {.unnumbered}
 
-Packages we will use:
+An R **package** is a bundle of functions that someone else has written and shared, so you don't have to write them yourself. You install a package once, then load it with `library()` in each session that uses it. Packages we will use:
 
 - **`sf`**: the modern standard for *vector* spatial data (points, lines, polygons).
 - **`dplyr`**: attribute wrangling. `sf` objects work with `filter()`, `mutate()`, `count()` and `group_by()` directly.
 - **`ggplot2` + `ggspatial`**: mapping. `geom_sf()` draws geometry; `ggspatial` adds the scale bar and north arrow.
 - **`readxl`**: reads `.xls` and `.xlsx` files straight into a data frame, for the attribute table we join on.
 
-Rather than assume those are already installed, the chunk below checks first and installs whatever's missing. Then `library()` loads each one. Run it now: the first time, installing `sf` can take a few minutes, and it can run while we talk through §1.
+![`sf` keeps each feature's geometry stuck to its row of attributes, in an ordinary table. Artwork by [@allison_horst](https://github.com/allisonhorst/stats-illustrations), CC BY 4.0.](images/sf-horst.jpg){fig-alt="Cartoon under the title 'sf: spatial data... simplified.' Fuzzy monsters glue and tape colorful map shapes onto the rows of a table labeled 'attributes + geometries.' Text reads 'Sticky geometries: for people who love their maps and sanity.'" width="70%"}
+
+Rather than assume those are already installed, the chunk below checks first and installs whatever's missing. Then `library()` loads each one. Run it now: the first time, installing `sf` can take a few minutes, and it can run while we talk through @sec-gis.
 
 ```{r}
 #| label: libraries
@@ -129,7 +130,7 @@ This is a snippet worth keeping in your back pocket. It's the difference between
 
 - **Install only what's missing.** Calling `install.packages()` unconditionally re-downloads and recompiles packages you already have. For `sf` that means several slow minutes, and on a shared machine it may fail outright on permissions.
 - **Name the repo explicitly.** `repos = "https://cloud.r-project.org"` means the line also works when R is running non-interactively (in a render, a scheduled job, or CI), where there's no mirror set and no one to answer the "choose a CRAN mirror" prompt.
-- **Still call `library()` one per line.** The install block is plumbing; the `library()` calls are documentation. Anyone reading your script should be able to see the dependencies at a glance.
+- **Still call `library()` one per line.** Anyone reading your script should be able to see the dependencies at a glance.
 
 This handles *missing* packages, not *outdated* ones. If a package is installed but too old for the code, you'll get a confusing error rather than an install. `packageVersion("sf")` is how you check.
 :::
@@ -159,7 +160,7 @@ A GIS stacks its data in **layers**, one for each theme: land use, elevation, st
 
 Today is all vector data: our layers are buildings, trees, campus boundaries and landmarks. For rasters in R, the package to use is `terra`.
 
-### Points, lines and polygons
+### Points, lines and polygons {#sec-geomtypes}
 
 Vector features come in three basic shapes:
 
@@ -184,7 +185,7 @@ Going from the globe to a flat map is called **projecting**. Imagine wrapping a 
 
 No flat map can keep all of those right everywhere. Each projection picks what to protect, and where. Most web maps use Mercator, which keeps the shapes of small areas right but inflates areas toward the poles: Greenland looks about as big as Africa, which is about 14 times larger.
 
-That's why there are projections made for one region. NC State Plane is a cone that cuts the globe along two lines of latitude across North Carolina. UTM, which we'll use in §3, turns the cylinder on its side so it meets the globe along a narrow north–south band, one zone at a time. Each is accurate in its own area and distorted far from it. So choose a projection made for the place your data is.
+That's why there are projections made for one region. NC State Plane is a cone that cuts the globe along two lines of latitude across North Carolina. UTM, which we'll use in @sec-transform, turns the cylinder on its side so it meets the globe along a narrow north–south band, one zone at a time. Each is accurate in its own area and distorted far from it. So choose a projection made for the place your data is.
 
 More on distortion:
 
@@ -200,16 +201,16 @@ Desktop GIS software such as ArcGIS Pro and QGIS works by pointing and clicking.
 |                          | R (code)                                          | Desktop GIS (point and click)                                    |
 |--------------------------|---------------------------------------------------|------------------------------------------------------------------|
 | **Getting started**      | Takes time to learn the language                  | Tools are in menus, so you can explore right away, though there are a lot of buttons |
-| **Repeating a task**     | Rerun the script, on one file or a hundred        | Click through the steps again; most tools aren't built for batches of files |
-| **Showing your work**    | The script is a record anyone can rerun and check | Hard to record exactly what you clicked, and in what order       |
+| **Repeating a task**     | Rerun the script, on one file or a hundred        | Batch mode and ModelBuilder (ArcGIS Pro) or the Graphical Modeler (QGIS) repeat tools over many files |
+| **Showing your work**    | The script is a record anyone can rerun and check | The geoprocessing history lists the tools you ran, but not every edit or styling choice |
 | **Custom analysis**      | Change any function, or write your own            | Limited to the tools the software provides                       |
 | **Drawing new features** | Small edits only (the `mapedit` package)          | Built for it: tracing, snapping and topology tools               |
 | **Georeferencing and 3D** | Possible, but harder                             | Well supported: fitting scanned maps to coordinates, LiDAR       |
 | **Map design**           | Precise and repeatable, but every setting is code | Quicker to try layouts by eye                                    |
 
-The two don't have to compete. Which one suits a job depends on the task, how repeatable the work needs to be, and your own skills: drawing new features suits a desktop GIS, and an analysis you'll rerun suits R. The same files open in both. Today is about the R side, where every step is written down, so you can rerun it on your own data.
+Which one suits a job depends on the task, how repeatable the work needs to be, and your own skills: drawing new features suits a desktop GIS, and an analysis you'll rerun suits R. The same files open in both. Today is about the R side, where every step is written down, so you can rerun it on your own data.
 
-*Table adapted from "The Geospatial Landscape," [Data Carpentry: Introduction to Geospatial Concepts](https://datacarpentry.github.io/organization-geospatial/04-geo-landscape.html) (CC BY 4.0), and from §10.1 of [Geocomputation with R](https://r.geocompx.org/gis.html) by Robin Lovelace, Jakub Nowosad and Jannes Muenchow.*
+*Table adapted from "The Geospatial Landscape," [Data Carpentry: Introduction to Geospatial Concepts](https://datacarpentry.github.io/organization-geospatial/04-geo-landscape.html) (CC BY 4.0), and from section 10.1 of [Geocomputation with R](https://r.geocompx.org/gis.html) by Robin Lovelace, Jakub Nowosad and Jannes Muenchow.*
 
 ------------------------------------------------------------------------
 
@@ -240,10 +241,9 @@ The tree inventory is provided by **NC State University, Campus Planning & Strat
 **Open the project first**, if you haven't already. It differs by editor:
 
 - **RStudio:** double-click `mapping-r.Rproj` in the unzipped folder.
-- **Posit Cloud:** the project is already open.
 - **Positron:** launch Positron first, then **File → Open Folder** and choose the unzipped `mapping-r-main` folder. (Double-clicking the `.Rproj` doesn't reliably launch Positron.)
 
-Any of these points R at the project folder, which is what makes the short file paths below work. To confirm, `list.files()` lists what's in a folder. The first line should list `BLDGSCAMPUS.shp`, `CAMPUSPERIMETER_ALL.shp` (each with its partner files), `NCStateBuildingsData.xls`, `NCState_places.csv` and the `NCSU_TreeInventory` folder. The second should list the `.gdb` inside that folder.
+Either of these points R at the project folder, which is what makes the short file paths below work. To confirm, `list.files()` lists what's in a folder. The first line should list `BLDGSCAMPUS.shp`, `CAMPUSPERIMETER_ALL.shp` (each with its partner files), `NCStateBuildingsData.xls`, `NCState_places.csv` and the `NCSU_TreeInventory` folder. The second should list the `.gdb` inside that folder.
 
 ```{r}
 #| label: check-files
@@ -281,10 +281,10 @@ trees <- st_read(
 ::: callout-tip
 ## Extra: reading a `.gdb` directly, no ArcGIS export needed
 
-`sf` reads File Geodatabases natively (via GDAL's OpenFileGDB driver), so there's no need to export to shapefile first. That's a good thing: shapefiles truncate field names to 10 characters and flatten some data types, so your attributes are safer straight from the `.gdb`. If you're ever choosing a format for your *own* data, GeoPackage (`.gpkg`) is the friendly modern option.
+`sf` reads File Geodatabases natively (via GDAL's OpenFileGDB driver), so there's no need to export to shapefile first. That's a good thing: shapefiles truncate field names to 10 characters and flatten some data types, so your attributes are safer straight from the `.gdb`. If you're ever choosing a format for your *own* data, GeoPackage (`.gpkg`) is the friendly, modern, non-proprietary option: an open standard that ArcGIS, QGIS and R all read.
 :::
 
-### Focus on main campus
+### Focus on main campus {#sec-clip}
 
 We only want main campus, but the layers we just read cover more than that. Read in the campus boundaries the same way:
 
@@ -326,7 +326,7 @@ names(perimeters)
 st_drop_geometry(perimeters)
 ```
 
-The attribute we need is `Precinct_N`. **North Campus** and **Central Campus** together are what people mean by main campus, so `filter()` keeps those two rows. Then `layer[boundary, ]` does the clipping: it keeps the features of `layer` that touch `boundary`, whole, and drops the rest. It's the same test as `st_intersects()`, which we'll meet in §4.
+The attribute we need is `Precinct_N`. **North Campus** and **Central Campus** together are what people mean by main campus, so `filter()` keeps those two rows. Then `layer[boundary, ]` does the clipping. In `sf`, the square brackets accept a shape where you'd normally give row numbers: `buildings[main_campus, ]` keeps the rows of `buildings` that touch `main_campus`, whole, and drops the rest. Behind the scenes it runs `st_intersects()`, which we'll meet in @sec-question.
 
 The tree inventory also flags trees that have been taken out. We're about to ask a question about shade, so we drop those too. Clipping takes the buildings from 1,217 footprints to 209, and the trees from 4,424 to the 1,925 still standing on main campus.
 
@@ -335,9 +335,10 @@ The tree inventory also flags trees that have been taken out. We're about to ask
 main_campus <- perimeters |>
   filter(Precinct_N %in% c("North Campus", "Central Campus"))
 
-# Keep only the features that fall on main campus
+# sf's square brackets accept a shape instead of row numbers:
+# keep the rows that touch main campus
 buildings <- buildings[main_campus, ]
-trees     <- trees[main_campus, ]
+trees <- trees[main_campus, ]
 
 # Drop the trees that have been removed
 trees <- trees |> filter(spacestatus != "Removed")
@@ -357,7 +358,7 @@ plot(st_geometry(buildings), add = TRUE, col = "grey80", border = "grey40")
 plot(st_geometry(trees), add = TRUE, pch = 20, cex = 0.4, col = "forestgreen")
 ```
 
-### Join the building attributes
+### Join the building attributes {#sec-attr-join}
 
 The buildings layer has very little in it: an internal ID, a building number, and the geometry. The building names and addresses are in an Excel spreadsheet. An **attribute join** brings them together by matching rows on a column both tables share, called the *key*. Here the key is the building number: `BLDGNUM` in the footprints and `BLDG_NUM` in the spreadsheet.
 
@@ -397,7 +398,7 @@ buildings |>
 
 ### The third layer: a spreadsheet of landmarks {#sec-csv}
 
-Our last dataset is the kind most people actually arrive with: a plain spreadsheet, with a column of latitudes and a column of longitudes. `data/NCState_places.csv` is a hand-typed list of well-known campus spots, and it's what we'll ask our spatial question about in §4. `read.csv()` reads it, and `str()` shows its columns. Nothing about it is spatial to R yet: `lat` and `lon` are ordinary numbers.
+Our last dataset is the kind most people actually arrive with: a plain spreadsheet, with a column of latitudes and a column of longitudes. `data/NCState_places.csv` is a hand-typed list of well-known campus spots, and it's what we'll ask our spatial question about in @sec-explore. `read.csv()` reads it, and `str()` shows its columns. Nothing about it is spatial to R yet: `lat` and `lon` are ordinary numbers.
 
 ```{r}
 #| label: csv-source
@@ -423,12 +424,12 @@ places
 ::: callout-warning
 ## Gotcha: the two ways this goes wrong
 
-**Reversing `coords`.** `c("lon", "lat")` is x-then-y, which reads backwards against the "lat/long" everyone says out loud. This CSV lists `lat` first, which makes the mistake easier still. Reverse them and R faithfully places campus at 35.8°E, 78.7°S: the middle of Antarctica. Nothing errors. You just get a map of nowhere.
+**Putting latitude first.** People say "lat/long", and this CSV lists `lat` first, so it's easy to write `coords = c("lat", "lon")`. But `coords` wants x, then y: longitude first, as in the chunk above. Swap them and R faithfully places campus at 35.8°E, 78.7°S, in the middle of Antarctica. Nothing errors. You just get a map of nowhere.
 
 **Forgetting `crs = 4326`.** Without it, R stores the numbers but has no idea where on Earth they are, and every later step (mapping, measuring, joining) silently misbehaves. If your coordinates look like `-78.6, 35.7`, they're almost always lon/lat, i.e. `crs = 4326`.
 :::
 
-Check that the points landed where you meant them to. Plot the points first, so they set the map's extent, then draw the campus boundaries into that window. The boundaries are in feet and the points are in degrees, so `st_transform()` converts the boundaries to match. There's more on that in §3.
+Check that the points landed where you meant them to. Plot the points first, so they set the map's extent, then draw the campus boundaries into that window. The boundaries are in feet and the points are in degrees, so `st_transform()` converts the boundaries to match. There's more on that in @sec-transform.
 
 ```{r}
 #| label: csv-check
@@ -441,7 +442,7 @@ plot(st_geometry(st_transform(perimeters, 4326)), add = TRUE, border = "grey55")
 
 Finally, clip the landmarks to main campus. The two precinct polygons don't quite meet where the railroad cuts through campus, and the Free Expression Tunnel sits in that gap. So we clip to main campus's bounding *box*, the rectangle around it, instead of the polygons themselves, and the tunnel survives. `st_bbox()` finds the rectangle, and `st_as_sfc()` turns it into a shape we can clip with. Nine landmarks are on main campus.
 
-That on-ramp (table → `st_as_sf()` → check → clip) is the whole game for coordinate spreadsheets, and it's exactly how you'd bring in your own study sites.
+That on-ramp (table → `st_as_sf()` → check → clip) is how you work with any spreadsheet of coordinates, and it's exactly how you'd bring in your own study sites.
 
 ```{r}
 #| label: clip-places
@@ -469,28 +470,28 @@ trees
 
 ### Geometry types
 
-§1.2 introduced the three basic shapes. `st_geometry_type()` tells you which one each feature is, and `unique()` boils that down to one answer per layer:
+@sec-geomtypes introduced the three basic shapes. `st_geometry_type()` tells you which one each feature is, and `unique()` boils that down to one answer per layer. It returns a *factor*, and printing a factor also lists every value it could take: all 18 geometry types `sf` knows. `as.character()` prints just the answer:
 
 ```{r}
 #| label: geom-types
 # POINT: one location each
-unique(st_geometry_type(trees))
+as.character(unique(st_geometry_type(trees)))
 # MULTIPOLYGON: an area. "Multi" means one feature can have several pieces.
-unique(st_geometry_type(buildings))
+as.character(unique(st_geometry_type(buildings)))
 ```
 
 ### The coordinate reference system {#sec-crs}
 
-§1.3 explained what a CRS is. In R, `st_crs()` returns a layer's CRS, and `$Name` pulls out its name. Ask each layer what it's in. The two layers from campus GIS use NC State Plane, in feet. The landmarks are in WGS 84 degrees, because that's what we told `st_as_sf()`. All three are correct. They just can't be compared with each other until they're on a common CRS.
+@sec-gis-crs explained what a CRS is. In R, `st_crs()` returns a layer's CRS, and `$Name` pulls out its name. Ask each layer what it's in. The two layers from campus GIS use NC State Plane, in feet. The landmarks are in WGS 84 degrees, because that's what we told `st_as_sf()`. All three are correct. They just can't be compared with each other until they're on a common CRS.
 
 ```{r}
 #| label: crs
-# The tree inventory. The first one is done; your turn for the other two.
+# The tree inventory
 st_crs(trees)$Name
 # The buildings, from the same campus GIS office
-____
-# Our spreadsheet: the object we made with st_as_sf()
-____
+st_crs(buildings)$Name
+# Our spreadsheet
+st_crs(places)$Name
 ```
 
 #### What happens if you ignore it?
@@ -528,22 +529,20 @@ st_intersects(places, trees)
 
 ### Reproject onto a common CRS (in meters) {#sec-transform}
 
-In §4 we'll relate the landmarks to the trees and measure a distance, "within 100 meters". The first needs the layers on one CRS. The second is easiest in a *projected* CRS in meters, where `dist = 100` plainly means 100 meters.
+In @sec-explore we'll relate the landmarks to the trees and measure a distance, "within 100 meters". The first needs the layers on one CRS. The second is easiest in a *projected* CRS in meters, where `dist = 100` plainly means 100 meters.
 
-`st_transform(x, crs)` converts a layer to another CRS. Give it the layer and the target, either as an EPSG code or as another layer's `st_crs()`. We'll use **UTM zone 17N (EPSG:32617)**, a metric CRS made for the strip of the globe that includes Raleigh. Afterwards, `units_gdal` should say `"metre"`, and the `==` check from §3.3 should pass. From here on we use the `_m` layers.
+`st_transform(x, crs)` converts a layer to another CRS. Give it the layer and the target, either as an EPSG code or as another layer's `st_crs()`. We'll use **UTM zone 17N (EPSG:32617)**, a metric CRS made for the strip of the globe that includes Raleigh. Afterwards, `units_gdal` should say `"metre"`, and the `==` check from @sec-crs should pass. From here on we use the `_m` layers.
 
 ```{r}
 #| label: transform
-# The first one is done. Follow the pattern for the buildings and the landmarks.
-trees_m     <- st_transform(trees,     32617)
-buildings_m <- ____
-places_m    <- ____
+trees_m <- st_transform(trees, 32617)
+buildings_m <- st_transform(buildings, 32617)
+places_m <- st_transform(places, 32617)
 
 # Now "metre"
 st_crs(trees_m)$units_gdal
-# TRUE: the check from §3.3 passes now. Your turn: compare the reprojected
-# landmarks with the reprojected trees (the objects ending in _m).
-st_crs(____) == st_crs(____)
+# TRUE: the CRS check passes now
+st_crs(places_m) == st_crs(trees_m)
 ```
 
 ::: callout-tip
@@ -565,7 +564,7 @@ Either would work here. For a whole country or continent, where areas need to st
 ::: callout-tip
 ## Extra: `sf` and longitude/latitude
 
-Given lon/lat data, `sf` measures on a sphere, so `st_distance()` reports meters and `st_buffer()` takes `dist` in meters, even on EPSG:4326 data. Many other tools don't, and treat degrees as if they were a flat unit. Measuring in a projected CRS, where you know the units, works the same everywhere.
+Given lon/lat data, `sf` measures on a sphere, so `st_distance()` reports meters and `st_buffer()` takes `dist` in meters, even on EPSG:4326 data. See the `dist` argument in [`?st_buffer`](https://r-spatial.github.io/sf/reference/geos_unary.html), and the vignette [Spherical geometry in sf](https://r-spatial.github.io/sf/articles/sf7.html). Not every tool does this. PostGIS's [`ST_Buffer()`](https://postgis.net/docs/ST_Buffer.html), for example, takes the distance in the layer's own units, which for lon/lat data are degrees. Measuring in a projected CRS, where you know the units, works the same everywhere.
 :::
 
 ::: callout-warning
@@ -589,7 +588,7 @@ trees_m |>
   count(common, sort = TRUE)
 ```
 
-### The spatial question: which place is the shadiest? {#sec-join}
+### The spatial question: which place is the shadiest? {#sec-question}
 
 Here is something a plain table simply cannot answer: *how many trees are within a hundred meters of the Belltower?* Nothing in the tree inventory mentions the Belltower. Nothing in the landmark spreadsheet mentions trees. The only thing relating the two is **where they are**, which is the whole reason to bother with spatial data.
 
@@ -605,13 +604,13 @@ It takes two steps.
 
 Why 100 m? It's roughly a one-minute walk, about the range over which shade actually influences where you'd choose to sit. The radius is a decision, not a fact, so pick yours deliberately and be ready to justify it. Reporting "the shadiest spot on campus" without naming the radius is the spatial-analysis equivalent of a bar chart with no y-axis.
 
-The result: the **Court of North Carolina** takes it with 81 trees, and the **Brickyard** comes last with 14. Both should feel obviously right to anyone who has walked across campus. The Court is the old tree-lined quad, and the Brickyard is a couple of acres of brick.
+The result: the **Court of North Carolina** takes it with 81 trees, and the **Brickyard** comes last with 14. Both should feel obviously right to anyone who has walked across campus. The Court is the old tree-lined quad, and the Brickyard is about an acre of brick.
 
 ```{r}
 #| label: buffer-count
 # Step 1: turn each landmark into a circle. dist is in meters.
 radius <- 100
-shade  <- st_buffer(places_m, dist = radius)
+shade <- st_buffer(places_m, dist = radius)
 
 # Step 2: count the trees inside each circle
 shade$n_trees <- lengths(st_intersects(shade, trees_m))
@@ -662,7 +661,7 @@ st_crs(places_ft)$units_gdal
 
 # 100 ... feet, this time
 shade_ft <- st_buffer(places_ft, dist = radius)
-data.frame(name    = places_ft$name,
+data.frame(name = places_ft$name,
            n_trees = lengths(st_intersects(shade_ft, trees)))
 ```
 
@@ -674,7 +673,7 @@ The Court of North Carolina drops from 81 trees to 0, because these are 100-*foo
 
 `st_buffer()` and `st_intersects()` are two of a family. The others you'll reach for:
 
-- `st_join(points, polygons, join = st_within)`: *which region contains each point?* This is a **spatial join**, the classic point-in-polygon. It works like the attribute join in §2.4, except the rows are matched by where they are instead of by a key column.
+- `st_join(points, polygons, join = st_within)`: *which region contains each point?* This is a **spatial join**, the classic point-in-polygon. It works like the attribute join in @sec-attr-join, except the rows are matched by where they are instead of by a key column.
 - `st_intersects()`, `st_contains()`, `st_touches()`: true/false spatial tests.
 - `st_nearest_feature()`: *which feature is each point closest to?*
 - `st_distance()`: actual distances between features.
@@ -698,7 +697,7 @@ We have an answer. Now we need a map that *shows* it: one map, centered on the w
 
 ```{r}
 #| label: winner
-winner    <- shade |> slice_max(n_trees, n = 1)
+winner <- shade |> slice_max(n_trees, n = 1)
 winner_pt <- places_m |> filter(name == winner$name)
 
 winner$name
@@ -721,7 +720,7 @@ view
 
 Labeling every building would bury the map in text, so we label four: the largest buildings that touch the circle. Because they touch it, they're always inside the window, and no label gets cut off at the edge.
 
-- `buildings_m[winner, ]` keeps the buildings that touch the circle. It's the same kind of clip as in §2.3.
+- `buildings_m[winner, ]` keeps the buildings that touch the circle. It's the same square-bracket clip as in @sec-clip: a shape inside the brackets instead of row numbers.
 - `st_area()` measures each footprint, in square meters. `as.numeric()` drops the units so `slice_max()` can sort by it.
 - `slice_max(area_m2, n = 4)` keeps the four largest.
 - `st_centroid()` turns each footprint into a single point at its center, which is where its label will go.
@@ -732,7 +731,7 @@ Labeling every building would bury the map in text, so we label four: the larges
 #| label: edge-labels
 edge <- buildings_m[winner, ]
 edge$area_m2 <- as.numeric(st_area(edge))
-edge_labels  <- edge |> slice_max(area_m2, n = 4) |> st_centroid()
+edge_labels <- edge |> slice_max(area_m2, n = 4) |> st_centroid()
 
 edge_labels$name
 ```
@@ -756,6 +755,12 @@ ggplot() +
   coord_sf(xlim = view[c("xmin", "xmax")], ylim = view[c("ymin", "ymax")])
 ```
 
+::: callout-warning
+## Gotcha: overlapping axis labels
+
+On a narrow map, the longitude labels along the bottom can run into each other. Ask for fewer of them with `+ scale_x_continuous(n.breaks = 3)`, or tilt them with `+ theme(axis.text.x = element_text(angle = 45, hjust = 1))`. The finished map below doesn't have the problem, because `theme_void()` removes the axes.
+:::
+
 ### Step 2: the finished map
 
 The finished map adds everything else at once. The code is long, but it comes in groups, and a comment above each group says what it does:
@@ -766,7 +771,7 @@ The finished map adds everything else at once. The code is long, but it comes in
 - **The size scale.** `scale_size_continuous()` sets the smallest and largest dot sizes, and the legend's title.
 - **The window.** `coord_sf()` zooms to `view`. `expand = FALSE` stops `ggplot2` from adding a margin around it.
 - **Scale bar and north arrow.** Both come from `ggspatial`. `location` takes two letters: `"bl"` is bottom left, `"tr"` top right.
-- **Title, subtitle and caption.** The title and subtitle are built from `winner` and `radius` with `paste0()`, not typed. Change `radius` in §4 and the map retitles itself, even if the winner changes. The caption credits the data.
+- **Title, subtitle and caption.** The title and subtitle are built from `winner` and `radius` with `paste0()`, not typed. Change `radius` in @sec-question and the map retitles itself, even if the winner changes. The caption credits the data.
 - **Theme.** `theme_void()` removes the axes and grid lines, which a map doesn't need. `theme()` then styles the text.
 
 **On your own map:** swap in your own layers and keep the order: context at the bottom, then the evidence, then your data, with labels on top.
@@ -802,19 +807,28 @@ ggplot() +
                          style = north_arrow_minimal()) +
   # Title and subtitle are built from the results, so they update themselves
   labs(
-    title    = paste0("The shadiest spot on campus: ", winner$name),
+    title = paste0("The shadiest spot on campus: ", winner$name),
     subtitle = paste0(winner$n_trees, " inventoried trees within ", radius, " m — ",
                       "more than any other landmark on main campus"),
-    caption  = "Data: NC State University, Campus Planning & Strategic Investment · Made in R with sf + ggplot2"
+    caption = "Data: NC State University, Campus Planning & Strategic Investment · Made in R with sf + ggplot2"
   ) +
   # No axes or grid lines, then style the text
   theme_void() +
   theme(
-    plot.title      = element_text(face = "bold", size = 14),
-    plot.subtitle   = element_text(color = "grey30", size = 10),
-    plot.caption    = element_text(color = "grey50", size = 7.5),
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(color = "grey30", size = 10),
+    plot.caption = element_text(color = "grey50", size = 7.5),
     legend.position = "right"
   )
+```
+
+```{r}
+#| label: final-map-image
+#| include: false
+# Only when the file is rendered: save this map for "Where we're headed" at the top.
+if (isTRUE(getOption("knitr.in.progress"))) {
+  ggsave("images/final-map.png", width = 8.4, height = 7, dpi = 150, bg = "white")
+}
 ```
 
 To save the map at print resolution, `ggsave()` writes the last map you drew to a file. `width` and `height` are in inches, and `dpi = 300` is print quality.
@@ -884,7 +898,7 @@ In one session we went from "what is spatial data?" to a finished map:
 - **clipping to a study area** early, in one place, is what keeps a campus map legible
 - **`st_buffer()` + `st_intersects()`** answered a question no attribute table could: which place has the most trees around it
 - **`geom_sf()` + `ggspatial`** turn layers into a publishable map
-- §6's **checklist** is the place to start with your own data
+- the **checklist** in @sec-checklist is the place to start with your own data
 
 ------------------------------------------------------------------------
 
@@ -911,7 +925,7 @@ We are available to help you with whatever question you have about this Workshop
 ### Take it further (good exercises)
 
 - Map **your own** CSV of sites: `read.csv()` → `st_as_sf()` → `geom_sf()`.
-- Change `radius` in §4 and see whether the winner survives it.
+- Change `radius` in @sec-question and see whether the winner survives it.
 - Rank by *canopy* instead of by count: swap `lengths(st_intersects(...))` for a `st_join()` and `sum(dbh, na.rm = TRUE)` per landmark. Does the Brickyard's handful of big trees change its standing?
 - Flip the question with `st_nearest_feature()`: assign every tree to its closest landmark, then `count()`.
 - Color the trees by species (`aes(color = common)`). You'll need to lump the long tail into "Other" first, or the legend will run off the page.
@@ -929,7 +943,7 @@ install.packages(c("maptiles", "tidyterra"))
 library(maptiles)
 library(tidyterra)
 
-# get_tiles() wants an area, so hand it the map window from §5.
+# get_tiles() wants an area, so hand it the map window from the map section.
 view_area <- st_as_sfc(st_bbox(st_buffer(winner, 60)))
 
 sat <- get_tiles(view_area, provider = "Esri.WorldImagery", zoom = 18, crop = TRUE)
@@ -993,10 +1007,10 @@ ggplot() +
   theme_void() +
   theme(
     plot.background = element_rect(fill = "grey8", color = NA),
-    plot.title      = element_text(color = "white", face = "bold", size = 14),
-    plot.subtitle   = element_text(color = "grey70", size = 10),
-    legend.text     = element_text(color = "grey80"),
-    legend.title    = element_text(color = "grey80")
+    plot.title = element_text(color = "white", face = "bold", size = 14),
+    plot.subtitle = element_text(color = "grey70", size = 10),
+    legend.text = element_text(color = "grey80"),
+    legend.title = element_text(color = "grey80")
   )
 ```
 

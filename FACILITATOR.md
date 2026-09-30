@@ -37,7 +37,7 @@ Don't live-type it. Run the chunks and talk over them. One stop is worth the tim
 map in Section 2.3. Ask the room what's wrong with it before you open the gotcha under it.
 
 **If you run long,** Section 4's buffer table is the part that has to survive, because Section 5's
-map is *about* that result. The circles map (`buffer-viz`) in Section 4 is the first thing to cut,
+map is *about* that result. The map of all the circles in Section 4.2 is the first thing to cut,
 and the feet demo after it is the second. Section 6 can be left for people to read afterwards.
 
 **Before class:** confirm the data folder downloads and reads on the room's setup. Ask everyone to

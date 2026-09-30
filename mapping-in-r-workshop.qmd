@@ -758,7 +758,7 @@ ggplot() +
 ::: callout-warning
 ## Gotcha: overlapping axis labels
 
-On a narrow map, the longitude labels along the bottom can run into each other. Ask for fewer of them with `+ scale_x_continuous(n.breaks = 3)`, or tilt them with `+ theme(axis.text.x = element_text(angle = 45, hjust = 1))`. The finished map below doesn't have the problem, because `theme_void()` removes the axes.
+On a narrow map, the longitude labels along the bottom can run into each other. Ask for fewer of them with `+ scale_x_continuous(n.breaks = 3)`, so each label has room to be read level. The finished map below doesn't have the problem, because `theme_void()` removes the axes.
 :::
 
 ### Step 2: the finished map

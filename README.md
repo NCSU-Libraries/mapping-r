@@ -2,8 +2,14 @@
 
 A one-hour workshop from NC State University Libraries, Data Science Services.
 
-You will read three kinds of spatial data into R, ask one question of it, and make a map you could put
-in a poster or a paper. The question: which spot on campus has the most trees around it?
+The session starts with a short introduction to GIS. Then you will read several kinds of spatial data
+into R, ask one question of it, and make a map you could put in a poster or a paper. The question: which
+spot on campus has the most trees around it?
+
+**Read the worksheet online: <https://ncsu-libraries.github.io/mapping-r/>**
+
+That is the finished version, with every map already drawn. You can read it or share it without
+installing anything. To run the code yourself, download the files below.
 
 ## Download the files
 
@@ -32,11 +38,12 @@ You do not need a GitHub account.
 
 | File | What it is |
 |---|---|
-| `mapping-in-r-workshop-teaching.qmd` | The worksheet we use in the session. Some code is left blank (`____`) to fill in as we go. Start here. |
-| `mapping-in-r-workshop-complete.qmd` | The same document with every blank filled in. Use it if you fall behind, or as a reference afterward. |
+| `mapping-in-r-workshop-teaching.qmd` | The worksheet we use in the session. Almost all the code is written for you. A few pieces in §3 are left blank (`____`) to fill in as we go. Start here. |
+| `mapping-in-r-workshop-complete.qmd` | The same document with the blanks filled in. Use it if you fall behind, or as a reference afterward. |
 | `mapping-in-r-workshop-complete.html` | The complete version, already run. Open it in a browser to read the whole thing and see the finished maps without running any code. |
 | `mapping-r.Rproj` | Project file. Sets the working directory. Positron users open the folder instead. |
 | `data/` | The five datasets. Do not rename anything inside. |
+| `images/` | The pictures in the worksheet. Each one is credited where it appears. |
 
 ## Install the packages first
 
@@ -65,6 +72,11 @@ Older tutorials load `sp`, `rgdal`, `rgeos` or `maptools`. Those were retired fr
 | `NCStateBuildingsData.xls` | Table: building names and addresses | NC State Campus Planning & Strategic Investment |
 | `NCState_places.csv` | Table: 13 campus landmarks as lat/lon | Compiled for this workshop |
 
+Three of the files are lightly edited copies of the campus originals. We removed the elevation (Z)
+values from the building footprints and the tree inventory. We also gave the buildings and the campus
+boundaries the standard EPSG:2264 definition of their coordinate system, which the tree inventory
+already used. Nothing else changed.
+
 ### Data disclaimer
 
 The campus data comes from NC State University, Campus Planning & Strategic Investment, and ships with
@@ -86,14 +98,9 @@ R is in the wrong working directory. Run `getwd()` to see where it thinks it is.
 **"there is no package called 'readxl'"**
 Run the `install.packages()` line above.
 
-**`OGR: Corrupt data` or `Error: OGR error` partway through**
-An `st_zm()` got skipped. Most building footprints carry an elevation coordinate and a few don't, and
-that mix breaks the maps once the buildings are reprojected. §1.2 shows how to check a layer for it
-and drop it with `st_zm()`.
-
 **Rendering the teaching file fails**
-That is expected while any `____` is still empty, because `____` is not valid R. Run chunks one at a
-time with the play button. Render once you have filled everything in.
+That is expected while any `____` in §3 is still empty, because `____` is not valid R. Run chunks one
+at a time with the play button. Render once you have filled everything in.
 
 ## Going further
 
@@ -113,3 +120,21 @@ workstation.
 
 Workshop materials: see [LICENSE](LICENSE). The campus datasets remain the property of NC State
 University, Campus Planning & Strategic Investment, and are redistributed here for workshop use only.
+
+### Pictures from other sources
+
+Most pictures in `images/` come from other sources. They are not covered by this repo's MIT license.
+Each one keeps its own license, and the worksheet credits it where it appears.
+
+| File | Source | License |
+|---|---|---|
+| `gis-layers.jpg` | Figure 1.8, *Essentials of Geographic Information Systems*, Saylor Academy (2012) | CC BY-NC-SA 3.0 |
+| `points-lines-polygons.jpg` | Figure 4.8, *Essentials of Geographic Information Systems*, Saylor Academy (2012) | CC BY-NC-SA 3.0 |
+| `buffers.jpg` | Figure 7.1, *Essentials of Geographic Information Systems*, Saylor Academy (2012) | CC BY-NC-SA 3.0 |
+| `spatial-join.jpg` | Figure 7.5, *Essentials of Geographic Information Systems*, Saylor Academy (2012) | CC BY-NC-SA 3.0 |
+| `geographic-vs-projected.png` | ArcGIS Pro documentation, "Coordinate systems, map projections, and transformations" | © Esri, used under Esri's terms for noncommercial teaching |
+| `intersects.png` | *Introduction to PostGIS*, ch. 11, Paul Ramsey, Mark Leslie and PostGIS contributors | CC BY-SA 3.0 |
+| `left-join.gif` | Garrick Aden-Buie, tidyexplain | CC0 |
+
+`final-map.png` is made by the worksheet itself, and `rstudio-panes-labeled.png` is our own screenshot.
+Both are covered by the MIT license like the rest of the repo.

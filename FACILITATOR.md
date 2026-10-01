@@ -7,16 +7,16 @@ the headings in `mapping-in-r-workshop.qmd`.
 
 Budget about 50 minutes of content and 10 for questions and install triage.
 
-| Min   | Section                                                                  |
-|------:|--------------------------------------------------------------------------|
-| 0–5   | Welcome, where we're headed, orientation, start the Setup chunk          |
-| 5–12  | Section 1: A short introduction to GIS                                   |
-| 12–24 | Section 2: Get four files in (`.shp`, `.gdb`, `.xls`, `.csv`), look, clip |
-| 24–32 | Section 3: What makes data spatial in R                                  |
-| 32–40 | Section 4: Explore, then the spatial question (buffer and count)         |
-| 40–52 | Section 5: Making the map                                                |
-| 52–55 | Section 6: Checklist for your own data (skim it; it's for later)         |
-| 55–60 | Wrap-up, resources, questions                                            |
+| Min   | Section                                                                      |
+|------:|------------------------------------------------------------------------------|
+| 0–5   | Welcome, where we're headed, orientation, start the Setup chunk              |
+| 5–12  | Section 1: A short introduction to GIS                                       |
+| 12–24 | Section 2: Read in four formats (`.shp`, `.gdb`, `.xls`, `.csv`), look, clip |
+| 24–32 | Section 3: What makes data spatial in R                                      |
+| 32–40 | Section 4: Explore, then the spatial question (buffer and count)             |
+| 40–52 | Section 5: Making the map                                                    |
+| 52–55 | Section 6: Checklist for your own data (skim it; it's for later)             |
+| 55–60 | Wrap-up, resources, questions                                                |
 
 ## Notes
 

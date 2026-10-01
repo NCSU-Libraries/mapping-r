@@ -986,4 +986,81 @@ The trick is that on a dark ground **every** piece of text needs its color set e
 - **`ggspatial::annotation_map_tile()`**: you already have `ggspatial` loaded, and this pulls OSM tiles through `rosm` in a single layer. Fewer providers than `maptiles`, but nothing extra to install.
 - **`mapview` / `leaflet`**: for a zoomable map in your browser rather than a static figure. The right tool for exploring your own data; the wrong one for a figure in a paper.
 
+### Bonus: an inset map
+
+A map zoomed in on one block doesn't tell readers where that block is. An **inset map** does: a small, zoomed-out map in a corner of the main one, with a box marking the area the main map shows. Someone who has never seen campus can tell at a glance where the winning landmark is.
+
+It takes three pieces, all made with packages you already have and objects from @sec-map: the main map, the small map (a *locator*), and a way to place one on the other.
+
+**The main map.** It's a lighter version of the finished map, without labels or a legend. This time the map goes into an object, `main_map`, instead of straight to the screen: a ggplot is an R object like any other, and it's only drawn when you print it. Nothing appears when you run this chunk.
+
+```{r}
+main_map <- ggplot() +
+  # The circle's tint, the buildings, then the circle's outline
+  geom_sf(data = winner, fill = "#eaf3ea", color = NA) +
+  geom_sf(data = buildings_m, fill = "grey86", color = "grey68", linewidth = 0.25) +
+  geom_sf(data = winner, fill = NA, color = "grey35", linetype = "dashed",
+          linewidth = 0.4) +
+  # The trees, all one size this time, and the landmark
+  geom_sf(data = trees_m, color = "forestgreen", size = 1, alpha = 0.7) +
+  geom_sf(data = winner_pt, color = "#7B3294", size = 3, shape = 18) +
+  coord_sf(xlim = view[c("xmin", "xmax")], ylim = view[c("ymin", "ymax")],
+           expand = FALSE) +
+  annotation_scale(location = "bl", width_hint = 0.28) +
+  labs(title = paste0(winner$name, ", and where it is on main campus")) +
+  theme_void() +
+  theme(plot.title = element_text(face = "bold", size = 14))
+```
+
+**The locator.** All of main campus, with the main map's window drawn on it as a box. `main_campus` is still in feet, so `st_transform()` makes a copy in meters, `campus_m`, to match the other layers. `st_as_sfc(view)` turns the window into a rectangle, the same trick as the landmarks clip in @sec-csv. `theme_void()` gives a plot no background, which would let the main map show through the inset, and a border of zero width. `element_rect()` sets `fill` for the background, and `color` and `linewidth` for the border. This chunk draws nothing either.
+
+```{r}
+campus_m <- st_transform(main_campus, 32617)
+
+# The main map's window, as a rectangle
+view_box <- st_as_sfc(view)
+
+locator <- ggplot() +
+  geom_sf(data = campus_m, fill = "grey97", color = "grey55", linewidth = 0.3) +
+  geom_sf(data = buildings_m, fill = "grey70", color = NA) +
+  geom_sf(data = view_box, fill = "#7B3294", alpha = 0.25, color = "#7B3294",
+          linewidth = 0.7) +
+  theme_void() +
+  # A white background and a thin border
+  theme(plot.background = element_rect(fill = "white", color = "grey40", linewidth = 0.5))
+```
+
+**Put the locator on the map.** `ggplotGrob()` turns a ggplot into a drawing that can go anywhere, and `annotation_custom()` places that drawing on the main map. Its `xmin`, `xmax`, `ymin` and `ymax` are the inset's edges in the main map's units, meters, worked out from `view`:
+
+- The inset is 45% of the window's width. Its height keeps campus's proportions, which `st_bbox()` gives us: campus is much wider than it is tall, so the inset is too. A box of any other shape would leave a gap beside the inset, because the locator keeps its proportions and shrinks to fit inside the box.
+- It sits in the bottom-right corner, below the circle, so it covers only buildings and trees that are context, never the evidence.
+
+```{r}
+#| fig-width: 7
+#| fig-height: 7.4
+#| fig-cap: "An inset map: the box on the small map is the area the big map shows."
+# The inset's width: 45% of the window's, in meters
+inset_width <- 0.45 * (view["xmax"] - view["xmin"])
+
+# Its height keeps campus's proportions, so the locator fills the inset
+campus_bbox <- st_bbox(campus_m)
+inset_height <- inset_width * (campus_bbox["ymax"] - campus_bbox["ymin"]) /
+  (campus_bbox["xmax"] - campus_bbox["xmin"])
+
+main_map +
+  annotation_custom(
+    ggplotGrob(locator),
+    xmin = view["xmax"] - inset_width,
+    xmax = view["xmax"],
+    ymin = view["ymin"],
+    ymax = view["ymin"] + inset_height
+  )
+```
+
+::: callout-tip
+## Extra: the same inset with patchwork
+
+The `patchwork` package, made for putting several ggplots on one page, has a function for insets that takes fractions of the map instead of meters. `main_map + inset_element(locator, left = 0.55, bottom = 0, right = 1, top = 0.16)` draws nearly the same map. It's a separate install: `install.packages("patchwork")`, then `library(patchwork)`.
+:::
+
 ------------------------------------------------------------------------

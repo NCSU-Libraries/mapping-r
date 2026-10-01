@@ -914,6 +914,10 @@ view_area <- st_as_sfc(st_bbox(st_buffer(winner, 60)))
 
 sat <- get_tiles(view_area, provider = "Esri.WorldImagery", zoom = 18, crop = TRUE)
 
+# Attribution is not optional. The credit is one long line: strwrap() splits it
+# into lines that fit under the map, and paste() joins them with line breaks.
+credit <- paste(strwrap(get_credit("Esri.WorldImagery"), width = 70), collapse = "\n")
+
 ggplot() +
   # The tiles go FIRST, underneath everything else
   geom_spatraster_rgb(data = sat, maxcell = Inf) +
@@ -924,8 +928,7 @@ ggplot() +
   scale_size_continuous(range = c(0.4, 3.2), name = "Trunk dia. (in)") +
   coord_sf(xlim = view[c("xmin", "xmax")], ylim = view[c("ymin", "ymax")],
            expand = FALSE) +
-  # Attribution is not optional
-  labs(caption = get_credit("Esri.WorldImagery")) +
+  labs(caption = credit) +
   theme_void() +
   theme(plot.background = element_rect(fill = "white", color = NA))
 ```
@@ -935,17 +938,17 @@ Worth doing once just to see it: the inventory points land on top of the actual 
 Four things that trip people up:
 
 - **The tile layer goes first.** `geom_sf()` layers paint in the order you add them, so a basemap added last covers your data.
-- **Attribution is a license condition, not a nicety.** `get_credit("<provider>")` returns the exact string the provider requires. Put it in `labs(caption = ...)`.
+- **Attribution is a license condition, not a nicety.** `get_credit("<provider>")` returns the exact string the provider requires. Put it in `labs(caption = ...)`, and wrap a long one with `strwrap()`, as above, so none of it is cut off.
 - **`zoom` is a trade-off.** Higher is sharper and slower, and pulls more tiles from someone else's server. For a campus-block view, 17–18 is about right; for a whole city, 12–13.
 - **Set the plot background explicitly.** `theme_void()` leaves it transparent, and a transparent PNG shows up black in some viewers, which will eat your title and your attribution line.
 
 ::: callout-warning
-## Most of the good-looking providers now want an API key
+## Gotcha: most of the good-looking providers now want an API key
 
 This has changed recently enough that a lot of tutorials are wrong about it.
 
-- **Keyless, works today:** `"Esri.WorldImagery"` (satellite), `"OpenStreetMap"` (streets; it even labels the Court of North Carolina and the halls around it), and the other `Esri.*` styles. Note that `"Esri.WorldGrayCanvas"` returns *"Map data not yet available"* at campus zoom levels, so it's no use for a close-in map.
-- **Key required:** all the `CartoDB.*` styles (including Positron and DarkMatter), every `Stadia.*` style (which is where the old Stamen designs ended up), and `Thunderforest.*`. You still get tiles back, but they're stamped **API KEY REQUIRED** right across your map. If you have a key, pass it with `get_tiles(..., apikey = "…")`.
+- **Keyless, works today:** `"Esri.WorldImagery"` (satellite), `"OpenStreetMap"` (streets; it even labels the Court of North Carolina and the halls around it), and the other `Esri.*` styles. Of those, only `"Esri.WorldStreetMap"` and `"Esri.WorldTopoMap"` have tiles at campus zoom levels. The rest, such as `"Esri.WorldGrayCanvas"`, return *"Map data not yet available"*, so they're no use for a close-in map.
+- **Key required:** all the `CartoDB.*` styles (including Positron and DarkMatter), every `Stadia.*` style (which is where the old Stamen designs ended up), and `Thunderforest.*`. Without a key, `CartoDB.*` still sends tiles, stamped **API KEY REQUIRED** right across your map, while `Stadia.*` and `Thunderforest.*` make `get_tiles()` stop with an error: `A problem occurred while downloading the tiles`. If you have a key, pass it with `get_tiles(..., apikey = "…")`.
 
 `names(maptiles::get_providers())` lists everything available.
 :::

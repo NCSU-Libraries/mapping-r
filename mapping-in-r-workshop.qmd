@@ -9,7 +9,9 @@ format:
     toc-depth: 2
     number-sections: true
     code-fold: false
-    theme: cosmo
+    theme:
+      light: cosmo
+      dark: [darkly, dark.scss]
     embed-resources: true
 execute:
   warning: false

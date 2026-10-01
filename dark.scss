@@ -1,0 +1,7 @@
+/*-- scss:rules --*/
+
+// The dark theme gives inline code in body text a dark background, but not inline code in
+// figure captions, which keeps a pale one and is hard to read. Give captions the same one.
+figcaption code {
+  background-color: rgba(67, 67, 67, 0.65);
+}

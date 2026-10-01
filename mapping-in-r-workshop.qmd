@@ -137,7 +137,7 @@ This handles *missing* packages, not *outdated* ones. If a package is installed 
 ::: callout-tip
 ## Extra: a note on the ecosystem
 
-If you go hunting for tutorials, you'll find old code using `sp`, `rgdal`, `rgeos`, or `maptools`. **Those were retired from CRAN at the end of 2023.** Today's world is `sf` for vector data. If a Stack Overflow answer loads `rgdal`, it's stale. Move on.
+If you go hunting for tutorials, you'll find old code using `rgdal`, `rgeos`, or `maptools`. **Those were retired from CRAN in October 2023.** You'll also see `sp`, the older way to store spatial data in R. It's still on CRAN, but today's world is `sf` for vector data. If a Stack Overflow answer loads `rgdal`, it's stale. Move on.
 :::
 
 ------------------------------------------------------------------------
@@ -696,7 +696,7 @@ Labeling every building would bury the map in text, so we label four: the larges
 - `buildings_m[winner, ]` keeps the buildings that touch the circle. It's the same square-bracket clip as in @sec-clip: a shape inside the brackets instead of row numbers.
 - `st_area()` measures each footprint, in square meters. `as.numeric()` drops the units so `slice_max()` can sort by it.
 - `slice_max(area_m2, n = 4)` keeps the four largest.
-- `st_centroid()` turns each footprint into a single point at its center, which is where its label will go.
+- `st_centroid()` turns each footprint into a single point at its center, which is where its label will go. It also prints a warning, `st_centroid assumes attributes are constant over geometries`. It means each point gets a copy of its building's columns, which is fine for a name, so you can ignore it.
 
 **On your own map:** keep the features inside your window, rank them by whatever matters (size, visitors, a category), and label only the top few.
 

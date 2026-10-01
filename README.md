@@ -58,8 +58,9 @@ install.packages(c("sf", "dplyr", "ggplot2", "ggspatial", "readxl"))
 - `ggplot2` and `ggspatial` for the map, the scale bar and the north arrow
 - `readxl` reads the `.xls` of building attributes
 
-Older tutorials load `sp`, `rgdal`, `rgeos` or `maptools`. Those were retired from CRAN at the end of
-2023. Use `sf` instead.
+Older tutorials load `rgdal`, `rgeos` or `maptools`. Those were retired from CRAN in October 2023. You
+will also see `sp`. It is still on CRAN, but it is the older way to store spatial data. Use `sf`
+instead.
 
 ## The data
 

@@ -1,4 +1,4 @@
-# Facilitator notes: Mapping in R
+# Facilitator notes: Mapping with R
 
 For whoever teaches the session. This file is left out of the attendee zip. Section numbers match
 the headings in `mapping-in-r-workshop.qmd`.

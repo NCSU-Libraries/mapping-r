@@ -1,5 +1,5 @@
 ---
-title: "Mapping in R"
+title: "Mapping with R"
 subtitle: "Understanding spatial data and making a good map with `sf`"
 author: "NC State University Libraries — Data Science Services"
 date: today

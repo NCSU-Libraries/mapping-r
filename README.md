@@ -1,4 +1,4 @@
-# Mapping in R
+# Mapping with R
 
 A one-hour workshop from NC State University Libraries, Data Science Services.
 

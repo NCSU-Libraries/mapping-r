@@ -17,6 +17,5 @@ Thumbs.db
 
 # Saved map output from the ggsave() chunk
 shadiest_spot.png
-campus_tree_map.png
 
 **/*.quarto_ipynb
